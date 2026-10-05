@@ -60,7 +60,7 @@ def default_device() -> str:
 def git_sha() -> str:
     try:
         sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
-        dirty = subprocess.check_output(["git", "status", "--porcelain"], cwd=REPO, text=True)
+        dirty = subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=REPO, text=True)
         return sha + ("-dirty" if dirty.strip() else "")
     except Exception:
         return "unknown"
