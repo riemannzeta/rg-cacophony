@@ -95,3 +95,9 @@ An append-only log of every choice that departs from, or fills a gap in, the app
 - **Tooling:** uv 0.12.23, matching ml-dev.
 - **Code flow:** code reaches the box only via `git push gpu main`, so every run is at a committed SHA. `scripts/gpu.sh` handles start/stop/push/pull.
 - **Stage 0 on CUDA:** all checks pass for all 7 variants (`results/stage0/sanity_cuda.json`), including bitwise reproducibility, exact-zero ε=0 and causality responses, and unit tests run on the GPU.
+
+## D13 — 2026-10-05 — Stage 2 re-run for clean provenance (results seen only as integrity flags)
+- **What happened:** the first Stage 2 run on step 143000 executed the pre-registered commit `1c25bf8` exactly, but recorded its SHA as `-dirty`. The cause was that its own log file was untracked in the checkout.
+- **Fix:** `git_sha()` now ignores untracked files (commit `bf3791a`). That commit changes no analysis code, and the config hash is unchanged.
+- **Re-run:** Stage 2 was run again. The re-run's summary is compared field by field with the first run, as an end-to-end determinism check.
+- **What was seen before the re-run:** only integrity flags (finite values, slice-0 identity, counts, provenance). No measurement was inspected.
