@@ -149,3 +149,13 @@ An append-only log of every choice that departs from, or fills a gap in, the app
 - **Clipping:** the trained model's L* = 0 (block 0), so k_before = L* − 2 = −2 is clipped to slice 0, as the pre-registered boundary rule provides. k_after = 1. Both windows keep 3 downstream slices.
 - **Sense direction:** it is undefined at slice 0, because every prompt of a word has the identical embedding there. The "before" condition therefore uses only the 8 random directions. The "after" condition uses random directions and the sense direction.
 - The headline contrast (after − before) uses random directions only, as pre-registered.
+
+## D20 — 2026-10-05 — Stage 4 approved; Mamba injections at even layers only (no C data generated)
+- **Approval:** the user approved Stage 4 (about 20 GPU-hours).
+- **Cost:** HF's pure-torch Mamba scan loops over positions in Python, about 3.5 s per 24-row response on the shared A10G. A full-resolution Mamba grid would cost about 30 GPU-hours.
+- **What changes:**
+  - Mamba runs inject only at even layers (`--k-stride 2`), which is exactly the set the **pre-registered primary** stride-2 analysis uses, so the primary analysis is unchanged.
+  - The calibration (ε*) also uses even-k injections.
+  - The PREREG-2 C **secondary** full-resolution analysis is therefore not run.
+  - Calibration batches are chunked (24 rows for 130M, 12 for 370M) for memory; each chunk keeps its own row-matched clean baseline.
+- **Status:** all of part C is exploratory (the user made no prediction), and nothing about it has been measured.
