@@ -18,7 +18,30 @@ import torch
 REPO = Path(__file__).resolve().parents[2]
 
 
+def disable_native_overrides() -> list[str]:
+    """Route every op to the standard ATen kernels.
+
+    torch >= 2.14 can override some eager CUDA ops (bmm outer products, norms, sums, ...) with
+    Triton/CuTe-DSL kernels compiled at run time. We disable all of them: the measurements should
+    run on ATen's documented (and, with use_deterministic_algorithms, deterministic) kernels.
+    Returns the DSL names that were disabled (recorded in env_info).
+    """
+    try:
+        from torch._native import registry
+    except ImportError:
+        return []
+    dsls = sorted({n.dsl_name for nodes in registry._graphs.values() for n in nodes})
+    if dsls:
+        registry.deregister_op_overrides(disable_dsl_names=dsls)
+    return dsls
+
+
+_DISABLED_NATIVE: list[str] = []
+
+
 def set_determinism(seed: int = 0) -> None:
+    global _DISABLED_NATIVE
+    _DISABLED_NATIVE = disable_native_overrides() or _DISABLED_NATIVE
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -57,4 +80,5 @@ def env_info() -> dict:
         "cuda": torch.version.cuda,
         "packages": {p: md.version(p) for p in pkgs},
         "deterministic": torch.are_deterministic_algorithms_enabled(),
+        "native_overrides_disabled": _DISABLED_NATIVE,
     }
