@@ -1,0 +1,15 @@
+EXIT=0 --manip none --phase calib 19:27:33
+EXIT=0 --manip none --phase main 19:42:23
+EXIT=0 --manip beta=0.5 --phase calib 19:56:23
+EXIT=0 --manip beta=0.5 --phase main 20:13:25
+EXIT=0 --manip beta=0.25 --phase calib 20:30:20
+EXIT=0 --manip beta=0.25 --phase main 20:44:37
+EXIT=0 --manip beta=0 --phase calib 20:56:09
+EXIT=0 --manip beta=0 --phase main 21:08:55
+EXIT=0 --manip window=64 --phase calib 21:25:18
+EXIT=0 --manip window=64 --phase main 21:40:05
+EXIT=0 --manip window=16 --phase calib 21:56:27
+EXIT=0 --manip window=16 --phase main 22:11:08
+EXIT=0 --manip window=4 --phase calib 22:27:31
+EXIT=0 --manip window=4 --phase main 22:42:24
+ALLDONE
