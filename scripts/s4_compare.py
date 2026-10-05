@@ -128,7 +128,8 @@ def main() -> None:
         mats = [np.array(m["per_passage_dir_pci_primary"]) for m in seq]
         steps = [paired_boot(mats[i], mats[i + 1]) for i in range(len(mats) - 1)]
         A["A1"] = {"adjacent_differences": steps, "pass": all(s["ci"][0] > 0 for s in steps)}
-    if base and all(cond(f"beta={b}") for b in CFG2.betas if b != 1.0):
+    bspec = lambda b: f"beta={b:g}"  # directory names: beta=0.5, beta=0.25, beta=0
+    if base and all(cond(bspec(b)) for b in CFG2.betas if b != 1.0):
         b0 = cond("beta=0")
         pci1, pci0 = np.array(base["per_passage_dir_pci_primary"]), np.array(b0["per_passage_dir_pci_primary"])
         r1, r0 = np.array(base["per_passage_dir_reach_primary"]), np.array(b0["per_passage_dir_reach_primary"])
@@ -137,7 +138,7 @@ def main() -> None:
         ratio = paired_boot(stacked0, stacked1, fn=lambda a, b: a[..., 0].mean() / b[..., 0].mean() - a[..., 1].mean() / b[..., 1].mean())
         A["A2"] = {"pci_intact_minus_beta0": drop, "pci_ratio_minus_reach_ratio": ratio,
                    "pass": drop["ci"][0] > 0 and ratio["ci"][1] < 0}
-        pts = [base["pci_primary"]["pci"]] + [cond(f"beta={b}")["pci_primary"]["pci"] for b in CFG2.betas if b != 1.0]
+        pts = [base["pci_primary"]["pci"]] + [cond(bspec(b))["pci_primary"]["pci"] for b in CFG2.betas if b != 1.0]
         d25 = paired_boot(pci1, np.array(cond("beta=0.25")["per_passage_dir_pci_primary"]))
         A["A3"] = {"pci_by_beta": dict(zip([str(b) for b in CFG2.betas], pts)), "pci1_minus_pci025": d25,
                    "pass": all(pts[i] >= pts[i + 1] for i in range(len(pts) - 1)) and d25["ci"][0] > 0}
