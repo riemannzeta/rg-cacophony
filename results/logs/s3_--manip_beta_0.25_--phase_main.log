@@ -1,0 +1,3 @@
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 3400.66it/s]
+Loaded pretrained model pythia-160m into HookedTransformer
+main done
