@@ -115,3 +115,11 @@ An append-only log of every choice that departs from, or fills a gap in, the app
 - **SHAs:** the six control variants ran at commits `d66d38b` (step 0, step 512) and `9e7c4df` (the rest). The trained model ran at `bf3791a`.
 - **Same instrument:** `git diff` shows the M1 code (`m1_order.py`, `m1_ablation.py`, `stats.py`, `stimuli.py`, `models.py`, `determinism.py`, `config.py`, `scripts/s2_m1.py`, `stimuli/`) is identical across these commits, and all runs share config hash `26fef58ef05e1363`.
 - **Post-hoc analysis:** `results/m1/pythia-160m_step143000/posthoc.json` (exploratory, D14) reproduces the pre-registered final-slice ablation effect exactly (asserted in the script).
+
+## D16 — 2026-10-05 — PREREG-2 part B stimulus details (no B data generated)
+- **Cue phrases:**
+  - Train frames (0–7) use cue phrases 0–3 and test frames (8–15) use phrases 4–7, so train and test cue vocabularies are disjoint, as in v1. Within a split, the Latin-square rotation fixes which phrase fills which slot.
+  - The validator rejected 3 v2 cue words that v1 had already used for the same word (`bounced`, `fishing`, `sticks`), 1 filler word that also appeared as a cue (`ride`), and 14 near-overlaps with v1 (e.g. `cigar`/`cigarette`, `waterfall`/`water`). All were replaced before any run. The final set has no errors or warnings.
+- **Saturation ratio R:** t is normalised by the test-set (A,A) and (B,B) means, so the ratio's denominator t̄(+2) − t̄(−2) is exactly 1. The pre-registered "denominator CI excludes 0" condition is therefore applied to the raw separation m_AA − m_BB, for both target and control. This is implementation detail only; the pre-registered quantity is unchanged.
+- **Prompt endings:** prompts end at the target, with no continuation, because part B measures only at the target.
+- **Validation:** synthetic ground-truth tests confirm R = 0.5 for a linear response and R = 1 for a step response.
