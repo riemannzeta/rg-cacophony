@@ -1,0 +1,7 @@
+EXIT=0 --step 0
+EXIT=0 --step 512
+EXIT=0 --step 4000
+EXIT=0 --step 143000 --shuffle-seed 1001
+EXIT=0 --step 143000 --shuffle-seed 1002
+EXIT=0 --step 143000 --shuffle-seed 1003
+ALLDONE

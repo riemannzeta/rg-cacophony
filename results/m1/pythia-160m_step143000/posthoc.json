@@ -1,0 +1,124 @@
+{
+ "label": "POST HOC / EXPLORATORY (D14) - not scored against PREDICTIONS.md",
+ "variant": "pythia-160m@step143000",
+ "env": {
+  "git_sha": "9e7c4df189af8ec771441a128c35758917309514",
+  "config_hash": "26fef58ef05e1363",
+  "host": "ip-172-31-28-143",
+  "python": "3.12.3",
+  "platform": "Linux-6.17.0-1009-aws-x86_64-with-glibc2.39",
+  "device": "NVIDIA A10G",
+  "cuda": "13.0",
+  "packages": {
+   "torch": "2.14.1",
+   "transformer-lens": "3.9.0",
+   "transformers": "5.18.0",
+   "numpy": "2.5.3",
+   "scipy": "1.18.1",
+   "pandas": "3.0.6",
+   "datasets": "5.0.1"
+  },
+  "deterministic": true,
+  "native_overrides_disabled": [
+   "native",
+   "triton"
+  ]
+ },
+ "peak_slice": 6,
+ "slices": [
+  6,
+  12
+ ],
+ "ablation": {
+  "delta@slice6": {
+   "clean": 1.3644230244823463,
+   "ablated": 0.6314428946084794,
+   "effect": 0.5372088543814739,
+   "null_random_p95": 0.32014768414469325,
+   "p_random": 0.004975124378109453,
+   "null_layer_matched_p95": 0.3998496994007786,
+   "p_layer_matched": 0.014925373134328358
+  },
+  "delta@slice12": {
+   "clean": 0.3097241033346392,
+   "ablated": 0.1501509101661367,
+   "effect": 0.5152107680689377,
+   "null_random_p95": 0.891925914756858,
+   "p_random": 0.15422885572139303,
+   "null_layer_matched_p95": 0.5375223054530108,
+   "p_layer_matched": 0.06467661691542288
+  },
+  "target@slice6": {
+   "clean": 2.6048677680024523,
+   "ablated": 1.5715054388809946,
+   "effect": 0.39670433248667114,
+   "null_random_p95": 0.10755773165372175,
+   "p_random": 0.004975124378109453,
+   "null_layer_matched_p95": 0.1126962354513889,
+   "p_layer_matched": 0.004975124378109453
+  },
+  "target@slice12": {
+   "clean": 3.457241645794702,
+   "ablated": 2.7046619021395624,
+   "effect": 0.21768213528567137,
+   "null_random_p95": 0.12671773187401866,
+   "p_random": 0.014925373134328358,
+   "null_layer_matched_p95": 0.11643667787243603,
+   "p_layer_matched": 0.004975124378109453
+  }
+ },
+ "entropy_detrended": {
+  "H": {
+   "spearman_contrib_vs_within_layer_rank": 0.48128630369781117,
+   "p_less": 1.0,
+   "partial_spearman_given_layer": 0.4486268161364942
+  },
+  "H_nobos": {
+   "spearman_contrib_vs_within_layer_rank": 0.039683737459246374,
+   "p_less": 0.676932306769323,
+   "partial_spearman_given_layer": 0.13019137697849242
+  },
+  "cue_mass_partial_spearman_given_layer": 0.38321600667132055,
+  "entropy_by_layer_mean": [
+   0.5944653699299925,
+   0.6220514601870794,
+   0.5142833915193395,
+   0.5143650798792406,
+   0.352050095796689,
+   0.25695745645265444,
+   0.3644501328991929,
+   0.3205039271729107,
+   0.09350023385239596,
+   0.05843348227679402,
+   0.05426299083938968,
+   0.022450964843631804
+  ]
+ },
+ "neutral_lean": {
+  "abs_t_minus_half_per_word": {
+   "bank": 0.3578,
+   "bat": 0.1994,
+   "pitcher": 0.5393,
+   "seal": 0.1831,
+   "spring": 0.2009,
+   "match": 0.202,
+   "mole": 0.1062,
+   "pen": 0.0356,
+   "bark": 0.419,
+   "palm": 0.0784
+  },
+  "mean_abs_t_minus_half": 0.2321512696920398,
+  "leans_toward": {
+   "bank": "money",
+   "bat": "animal",
+   "pitcher": "baseball",
+   "seal": "closure",
+   "spring": "season",
+   "match": "contest",
+   "mole": "animal",
+   "pen": "enclosure",
+   "bark": "dog",
+   "palm": "tree"
+  }
+ }
+}

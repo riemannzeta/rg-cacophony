@@ -110,3 +110,8 @@ An append-only log of every choice that departs from, or fills a gap in, the app
   - later: a recurrent (autoregressive) perturbation protocol, coarse-graining / causal-emergence measures, a Pythia-vs-Mamba comparison, and scale.
 - **Why PREREG-2 comes before Stage 3:** anything involving PCI must be registered before the trained model's PCI lattices are seen.
 - **PREDICTIONS.md is unchanged.** Its results are reported as scored, whatever PREREG-2 finds.
+
+## D15 — 2026-10-05 — M1 control runs: provenance note (results not yet inspected)
+- **SHAs:** the six control variants ran at commits `d66d38b` (step 0, step 512) and `9e7c4df` (the rest). The trained model ran at `bf3791a`.
+- **Same instrument:** `git diff` shows the M1 code (`m1_order.py`, `m1_ablation.py`, `stats.py`, `stimuli.py`, `models.py`, `determinism.py`, `config.py`, `scripts/s2_m1.py`, `stimuli/`) is identical across these commits, and all runs share config hash `26fef58ef05e1363`.
+- **Post-hoc analysis:** `results/m1/pythia-160m_step143000/posthoc.json` (exploratory, D14) reproduces the pre-registered final-slice ablation effect exactly (asserted in the script).
