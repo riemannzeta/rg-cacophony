@@ -1,6 +1,6 @@
 {
   "env": {
-    "git_sha": "bdd6084d3fd2dbba1dceaf69399cb59ddbea848c-dirty",
+    "git_sha": "6de763bc8662c355e37812ab5d6aabe28274c003",
     "config_hash": "616d0c78854b0e43",
     "host": "macbookair.lan",
     "python": "3.12.12",
