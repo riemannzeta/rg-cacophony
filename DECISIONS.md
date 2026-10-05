@@ -101,3 +101,12 @@ An append-only log of every choice that departs from, or fills a gap in, the app
 - **Fix:** `git_sha()` now ignores untracked files (commit `bf3791a`). That commit changes no analysis code, and the config hash is unchanged.
 - **Re-run:** Stage 2 was run again. The re-run's summary is compared field by field with the first run, as an end-to-end determinism check.
 - **What was seen before the re-run:** only integrity flags (finite values, slice-0 identity, counts, provenance). No measurement was inspected.
+
+## D14 — 2026-10-05 — Sequencing change and addendum pre-registration (after Stage 2 results)
+- **M1 controls run early.** M1 on step 0, 512, 4000 and the three shuffle seeds runs now, before Stage 3. Every analysis choice for these runs is already fixed in PREDICTIONS.md (b), so this changes only the order of work, not any analysis.
+- **New tests go in a separate pre-registration.** The additions proposed after Stage 2 get their own file (PREREG-2), committed before any of their data are generated:
+  - an attention-flattening ("anaesthesia") test, plus a local-window positive control, for PCI;
+  - a conflicting/graded-cue susceptibility test of symmetry breaking, on NEW prompts;
+  - later: a recurrent (autoregressive) perturbation protocol, coarse-graining / causal-emergence measures, a Pythia-vs-Mamba comparison, and scale.
+- **Why PREREG-2 comes before Stage 3:** anything involving PCI must be registered before the trained model's PCI lattices are seen.
+- **PREDICTIONS.md is unchanged.** Its results are reported as scored, whatever PREREG-2 finds.
