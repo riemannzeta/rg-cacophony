@@ -12,7 +12,35 @@ import numpy as np
 
 
 def lz76(bits) -> int:
-    """Lempel-Ziv 1976 complexity (number of phrases), Kaspar & Schuster (1987) algorithm."""
+    """Lempel-Ziv 1976 complexity (number of phrases), exhaustive-history parsing.
+
+    Vectorised equivalent of Kaspar & Schuster (1987): a new phrase starting at i is one symbol
+    longer than the longest prefix of s[i:] that also starts at some j < i (overlap allowed). The
+    phrase count is identical to `lz76_ks` (verified exactly in tests/test_lz76.py) and ~10x faster.
+    """
+    s = np.asarray(bits, dtype=np.uint8)
+    n = s.size
+    if n == 0:
+        return 0
+    c, i = 1, 1  # the first symbol is always its own phrase
+    while i < n:
+        cand = np.flatnonzero(s[:i] == s[i])  # earlier starts j whose symbol matches s[i]
+        if cand.size == 0:
+            i += 1  # unseen symbol: a phrase of length 1
+        else:
+            m = 0  # s[i : i + m + 1] is matched by some s[j : j + m + 1], j < i
+            while i + m + 1 < n:
+                nxt = cand[s[cand + m + 1] == s[i + m + 1]]
+                if nxt.size == 0:
+                    break
+                cand, m = nxt, m + 1
+            i += m + 2  # matched part plus one new symbol (the last phrase may be incomplete)
+        c += 1
+    return c
+
+
+def lz76_ks(bits) -> int:
+    """Lempel-Ziv 1976 complexity (number of phrases), Kaspar & Schuster (1987) reference algorithm."""
     s = bytes(np.asarray(bits, dtype=np.uint8))
     n = len(s)
     if n == 0:

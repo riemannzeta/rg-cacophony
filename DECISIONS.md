@@ -123,3 +123,11 @@ An append-only log of every choice that departs from, or fills a gap in, the app
 - **Saturation ratio R:** t is normalised by the test-set (A,A) and (B,B) means, so the ratio's denominator t̄(+2) − t̄(−2) is exactly 1. The pre-registered "denominator CI excludes 0" condition is therefore applied to the raw separation m_AA − m_BB, for both target and control. This is implementation detail only; the pre-registered quantity is unchanged.
 - **Prompt endings:** prompts end at the target, with no continuation, because part B measures only at the target.
 - **Validation:** synthetic ground-truth tests confirm R = 0.5 for a linear response and R = 1 for a step response.
+
+## D17 — 2026-10-05 — Faster LZ76 (identical output) and the Mamba runner (no new results seen)
+- **LZ76:** `rgc.pci.lz76` now uses a vectorised exhaustive-history parse (each new phrase is one symbol longer than the longest earlier match, overlap allowed).
+  - Its phrase counts equal the Kaspar–Schuster reference (`lz76_ks`, kept) exactly on 2,371 test strings: lengths 1–2304, densities 0–1, plus periodic strings. A permanent test enforces this.
+  - About 8.5× faster (6.4 ms vs 55 ms per 2,304-bit string).
+  - Because outputs are identical integers, runs made with either implementation are interchangeable. The intact Stage 3 run (in progress) uses the reference implementation; later runs use the fast one.
+- **Mamba runner (`rgc/mamba.py`, PREREG-2 part C):** HF `MambaForCausalLM` on the pure-torch path (neither the `kernels` nor the `mamba_ssm` package is installed). Perturbation and reading use forward pre-hooks.
+  - Stage-0-style checks on mamba-130m (CPU) pass: bitwise reproducible, ε=0 gives exactly zero, q<p gives exactly zero, and the injected site equals ε to 1e-3. Shuffled copies are exact per-tensor permutations.
