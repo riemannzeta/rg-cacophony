@@ -69,3 +69,13 @@ def lattice_bits(gain: np.ndarray, p: int, theta: float) -> np.ndarray:
 
 def pci(gain: np.ndarray, p: int, theta: float) -> float:
     return normalised_lz(lattice_bits(gain, p, theta))
+
+
+def pci_task(args) -> list[tuple[float, float]]:
+    """(gain lattice, p, thetas) -> [(PCI, p1) per theta]. Module-level so worker pools can pickle it."""
+    gain, p, thetas = args
+    out = []
+    for th in thetas:
+        bits = lattice_bits(gain, p, th)
+        out.append((normalised_lz(bits), float(bits.mean()) if bits.size else 0.0))
+    return out

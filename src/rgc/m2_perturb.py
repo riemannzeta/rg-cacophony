@@ -37,29 +37,43 @@ def slice_names(n_layers: int, k: int) -> list[str]:
     return names + [f"blocks.{n_layers - 1}.hook_resid_post"]
 
 
+def _rows(tokens: torch.Tensor, batch: int, device) -> torch.Tensor:
+    """[T] -> `batch` identical rows; [R, T] is used as is (one sequence per row)."""
+    if tokens.dim() == 1:
+        return tokens.to(device)[None].expand(batch, -1).contiguous()
+    assert tokens.shape[0] == batch
+    return tokens.to(device)
+
+
 @torch.no_grad()
-def clean_stack(model: HookedTransformer, tokens: torch.Tensor, k: int, batch: int) -> torch.Tensor:
-    """Clean residual slices L = k..n for `batch` identical rows: [batch, n+1-k, T, d]."""
+def clean_stack(model: HookedTransformer, tokens: torch.Tensor, k: int, batch: int,
+                extra_hooks=None) -> torch.Tensor:
+    """Clean residual slices L = k..n for the batch rows: [batch, n+1-k, T, d].
+
+    extra_hooks: manipulation hooks (e.g. attention flattening) applied to clean and perturbed
+    runs alike, so the response is always relative to the manipulated model's own clean state.
+    """
     names = slice_names(model.cfg.n_layers, k)
     store: dict[str, torch.Tensor] = {}
 
     def grab(act, hook):
         store[hook.name] = act.detach().clone()
 
-    x = tokens.to(model.cfg.device)[None].expand(batch, -1).contiguous()
-    model.run_with_hooks(x, return_type=None, fwd_hooks=[(n, grab) for n in names])
+    x = _rows(tokens, batch, model.cfg.device)
+    model.run_with_hooks(x, return_type=None, fwd_hooks=list(extra_hooks or []) + [(n, grab) for n in names])
     return torch.stack([store[n] for n in names], dim=1)
 
 
 @torch.no_grad()
 def perturb_response(
     model: HookedTransformer,
-    tokens: torch.Tensor,
+    tokens: torch.Tensor,  # [T] (replicated per row) or [R, T]
     k: int,
     p: torch.Tensor,
     u: torch.Tensor,
     eps: torch.Tensor,
     clean: torch.Tensor | None = None,
+    extra_hooks=None,
 ) -> torch.Tensor:
     """Relative response lattices r[row, L-k, q] for a batch of perturbations at layer k.
 
@@ -72,10 +86,10 @@ def perturb_response(
     R = p.shape[0]
     p, u, eps = p.to(dev), u.to(dev), eps.to(dev, torch.float32)
     if clean is None:
-        clean = clean_stack(model, tokens, k, R)
+        clean = clean_stack(model, tokens, k, R, extra_hooks)
     assert clean.shape[0] == R
     names = slice_names(model.cfg.n_layers, k)
-    out = torch.empty(R, len(names), tokens.shape[0], device=dev, dtype=torch.float32)
+    out = torch.empty(R, len(names), tokens.shape[-1], device=dev, dtype=torch.float32)
     rows = torch.arange(R, device=dev)
 
     def inject(act, hook):
@@ -86,12 +100,11 @@ def perturb_response(
     def read(i):
         def hook(act, hook):
             ref = clean[:, i]
-            out[:, i] = (act - ref).norm(dim=-1) / ref.norm(dim=-1)
+            out[:, i] = ((act - ref).norm(dim=-1) / ref.norm(dim=-1)).float()
 
         return hook
 
-    hooks = [(f"blocks.{k}.hook_resid_pre", inject)]
+    hooks = list(extra_hooks or []) + [(f"blocks.{k}.hook_resid_pre", inject)]
     hooks += [(n, read(i)) for i, n in enumerate(names)]
-    x = tokens.to(dev)[None].expand(R, -1).contiguous()
-    model.run_with_hooks(x, return_type=None, fwd_hooks=hooks)
+    model.run_with_hooks(_rows(tokens, R, dev), return_type=None, fwd_hooks=hooks)
     return out
