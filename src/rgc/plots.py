@@ -132,3 +132,89 @@ def m1_all(summary_path: Path, fig_dir: Path) -> None:
     m1_depth(s, fig_dir / "m1_dprime_entropy_depth.png")
     m1_heatmaps(s, fig_dir / "m1_head_heatmaps.png")
     m1_ablation(s, fig_dir / "m1_ablation_nulls.png")
+
+
+# ---------------------------------------------------------------------------------------------
+# Measurement 2
+# ---------------------------------------------------------------------------------------------
+
+def m2_calibration(calib: dict, path: Path) -> None:
+    rows = calib["rows"]
+    eps = [r["eps"] for r in rows]
+    fig, ax = plt.subplots(figsize=(6.5, 3.6), constrained_layout=True)
+    ax.plot(eps, [r["median_rel_dev"] for r in rows], color=SERIES[0], marker="o", markersize=4, label="median")
+    ax.plot(eps, [r["p95_rel_dev"] for r in rows], color=SERIES[1], marker="o", markersize=4, label="95th percentile")
+    ax.axhline(0.05, color=MUTED, linestyle="--", linewidth=1)
+    ax.text(eps[0], 0.05, " 5% tolerance", va="bottom", color=INK2, fontsize=8)
+    if calib.get("eps_star"):
+        ax.axvline(calib["eps_star"], color=SERIES[2], linewidth=1.6)
+        ax.text(calib["eps_star"], ax.get_ylim()[1] if False else 1.0, f" ε* = {calib['eps_star']:.0e}", color=INK2,
+                fontsize=8, va="bottom", transform=ax.get_xaxis_transform())
+    ax.set_xscale("log"); ax.set_yscale("log")
+    ax.set_xlabel("ε (relative perturbation size)")
+    ax.set_ylabel("|G_float32 − G_float64ref| / G_ref")
+    ax.set_title(f"Linear-regime calibration — {calib['variant']}" + ("" if calib.get("manip", "none") == "none" else f" [{calib['manip']}]"), loc="left")
+    ax.legend(fontsize=8)
+    _save(fig, path)
+
+
+def m2_lattices(G_by_k: dict, p: int, theta: float, title: str, path: Path, ks=(0, 4, 8)) -> None:
+    """Mean gain lattices log10 G(L, q) for injection at (k, p), averaged over passages and directions."""
+    fig, axes = plt.subplots(1, len(ks), figsize=(5 * len(ks), 3.6), constrained_layout=True, squeeze=False)
+    for ax, k in zip(axes[0], ks):
+        G = G_by_k[k]  # [S_k, T] mean lattice
+        A = np.log10(np.clip(G, 1e-4, None))
+        im = ax.imshow(A, aspect="auto", cmap=SEQ_BLUE, vmin=-4, vmax=max(0.5, float(A.max())), origin="lower",
+                       extent=[-0.5, G.shape[1] - 0.5, k - 0.5, k + G.shape[0] - 0.5])
+        ax.contour(np.arange(G.shape[1]), np.arange(k, k + G.shape[0]), G, levels=[theta], colors=[SERIES[1]], linewidths=0.9)
+        ax.axvline(p, color=MUTED, linewidth=0.8, linestyle=":")
+        ax.set_xlim(max(0, p - 8), G.shape[1] - 1)
+        ax.set_title(f"inject at slice {k}, position {p}", loc="left", fontsize=9)
+        ax.set_xlabel("position q")
+        ax.set_ylabel("residual slice L")
+        ax.grid(False)
+        fig.colorbar(im, ax=ax, shrink=0.85, label="log10 gain").outline.set_visible(False)
+    fig.suptitle(f"{title}  (orange contour: θ = {theta}; dotted: injected column)", x=0.0, ha="left",
+                 fontweight="bold", color=INK)
+    _save(fig, path)
+
+
+def m2_pci_theta(mains: dict, path: Path) -> None:
+    """PCI vs threshold with 95% CIs; mains: label -> main.json dict (slot order = dict order)."""
+    fig, ax = plt.subplots(figsize=(6.5, 3.8), constrained_layout=True)
+    for slot, (label, m) in enumerate(mains.items()):
+        th = [r["theta"] for r in m["pci_by_theta"]]
+        ax.fill_between(th, [r["ci"][0] for r in m["pci_by_theta"]], [r["ci"][1] for r in m["pci_by_theta"]],
+                        color=SERIES[slot % 8], alpha=0.15, linewidth=0)
+        ax.plot(th, [r["pci"] for r in m["pci_by_theta"]], color=SERIES[slot % 8], marker="o", markersize=4, label=label)
+    ax.axvline(0.1, color=MUTED, linestyle="--", linewidth=1)
+    ax.set_xscale("log")
+    ax.set_xlabel("binarisation threshold θ on gain")
+    ax.set_ylabel("PCI (normalised LZ76)")
+    ax.set_title("PCI across thresholds (dashed: pre-registered θ = 0.1)", loc="left")
+    ax.legend(fontsize=8)
+    _save(fig, path)
+
+
+def m2_spread(main: dict, path: Path, cell: str = "k0_p64") -> None:
+    sp = main["spread"][cell]
+    S = np.array(sp["S_mean"]); Seff = np.array(sp["S_eff_mean"])
+    t = np.arange(1, len(S) + 1)
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(10, 3.8), constrained_layout=True)
+    ax.plot(t, S, color=SERIES[0], marker="o", markersize=5, linewidth=0, label="S(t), mean over passages")
+    f = sp["pooled_fit"]
+    if f.get("fittable"):
+        ok = (S > 0) & (S < 0.9 * sp["n_available"])
+        tt = t[ok]
+        a_p = np.mean(np.log(S[ok]) - f["b"] * np.log(tt)); a_e = np.mean(np.log(S[ok]) - f["inv_tau"] * tt)
+        ax.plot(tt, np.exp(a_p) * tt ** f["b"], color=SERIES[1], label=f"power law, z = {f['z']:.2f}" if f.get("z") else "power law")
+        ax.plot(tt, np.exp(a_e + f["inv_tau"] * tt), color=SERIES[2], linestyle="--", label="exponential")
+        ax.set_title(f"Spread vs depth ({cell}); ΔAIC(exp − power) = {f['delta_aic_exp_minus_power']:.1f}", loc="left", fontsize=9)
+    ax.axhline(0.9 * sp["n_available"], color=MUTED, linestyle=":", linewidth=1)
+    ax.set_xscale("log"); ax.set_yscale("log")
+    ax.set_xlabel("depth after injection t = L − k"); ax.set_ylabel("positions with gain ≥ θ")
+    ax.legend(fontsize=8)
+    ax2.plot(t, Seff, color=SERIES[0], marker="o", markersize=4)
+    ax2.set_xlabel("depth after injection t"); ax2.set_ylabel("participation spread (threshold-free)")
+    ax2.set_title("Threshold-free spread", loc="left", fontsize=9)
+    _save(fig, path)
