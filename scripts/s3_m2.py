@@ -112,7 +112,7 @@ def main_grid(model, hooks, passages, dirs, eps: float, k_stride: int = 1) -> di
     return {k: np.stack(v) for k, v in lattices.items()}
 
 
-def analyse_main(lat: dict, nL: int, workers: int) -> dict:
+def analyse_main(lat: dict, nL: int, workers: int, dm_frac: float | None = None) -> dict:
     N, nP, nD = lat[0].shape[:3]
     thetas = list(CFG.theta_grid)
     tasks, index = [], []
@@ -120,7 +120,7 @@ def analyse_main(lat: dict, nL: int, workers: int) -> dict:
         for n in range(N):
             for ip, p in enumerate(CFG.p_grid):
                 for d in range(nD):
-                    tasks.append((lat[k][n, ip, d], p, thetas)); index.append((k, n, ip, d))
+                    tasks.append((lat[k][n, ip, d], p, thetas, dm_frac)); index.append((k, n, ip, d))
     if workers > 1:
         with Pool(workers) as pool:
             res = pool.map(pci_task, tasks, chunksize=64)
@@ -128,9 +128,12 @@ def analyse_main(lat: dict, nL: int, workers: int) -> dict:
         res = [pci_task(t) for t in tasks]
     PCI = np.zeros((nL, N, nP, nD, len(thetas)))
     P1 = np.zeros_like(PCI)
+    DM = np.zeros((nL, N, nP, nD))
     for (k, n, ip, d), r in zip(index, res):
-        PCI[k, n, ip, d] = [x[0] for x in r]
-        P1[k, n, ip, d] = [x[1] for x in r]
+        PCI[k, n, ip, d] = [x[0] for x in r[: len(thetas)]]
+        P1[k, n, ip, d] = [x[1] for x in r[: len(thetas)]]
+        if dm_frac:
+            DM[k, n, ip, d] = r[len(thetas)][0]
 
     ti = thetas.index(CFG.theta_primary)
     kmax = nL - CFG.min_downstream_layers  # k <= n_layers - 3
@@ -198,7 +201,19 @@ def analyse_main(lat: dict, nL: int, workers: int) -> dict:
     }
     ip, pz = p_idx[CFG.z_primary_p], CFG.z_primary_p
     self_col = {k: [float(lat[k][:, ip, :, s, pz].mean()) for s in range(lat[k].shape[3])] for k in range(nL)}
+    # PREREG-3: per (passage, direction) reach at every theta, threshold-free spread, density-matched PCI
+    reach_by_theta_nd = P1[: kmax + 1].mean(axis=(0, 2))  # [N, nD, theta]
+    seff_nd = np.mean([participation_spread(lat[k][:, ip], p).mean(-1)  # [N, nD] mean over slices
+                       for k in range(kmax + 1) for ip, p in enumerate(CFG.p_grid)], axis=0)
+    extra = {
+        "per_passage_dir_reach_by_theta": {str(th): reach_by_theta_nd[:, :, j].tolist() for j, th in enumerate(thetas)},
+        "per_passage_dir_seff": seff_nd.tolist(),
+    }
+    if dm_frac:
+        extra["dm_frac"] = dm_frac
+        extra["per_passage_dir_pci_dm"] = DM[: kmax + 1].mean(axis=(0, 2)).tolist()
     return {
+        **extra,
         "pci_by_theta": pci_theta,
         "pci_primary": pci_theta[ti],
         "pci_auc_logtheta": {"value": float(auc_nd.mean()), "ci": [float(x) for x in ci(auc_boot)]},
@@ -315,6 +330,9 @@ def main() -> None:
     ap.add_argument("--mamba", default=None, help="HF repo of a Mamba model (PREREG-2 C), e.g. state-spaces/mamba-130m-hf")
     ap.add_argument("--calib-chunk", type=int, default=None, help="max rows per calibration forward (memory)")
     ap.add_argument("--k-stride", type=int, default=1, help="inject only at every k_stride-th layer (Mamba primary)")
+    ap.add_argument("--passages", default=None, help="passage manifest (default: stimuli/wikitext_manifest.json)")
+    ap.add_argument("--out-root", default="results/m2", help="output root (PREREG-3: results/m2_fresh)")
+    ap.add_argument("--dm-frac", type=float, default=None, help="density-matched PCI fraction (PREREG-3: 0.2)")
     args = ap.parse_args()
     set_determinism(CFG.master_seed)
     if args.mamba:
@@ -326,16 +344,17 @@ def main() -> None:
         v = Variant(args.step, args.shuffle_seed, args.model)
         loader = lambda: load(v, device=args.device)
     name = v.label.replace("@", "_") + ("" if args.manip == "none" else f"__{args.manip}")
-    out_dir = REPO / "results" / "m2" / name
+    out_dir = REPO / args.out_root / name
     out_dir.mkdir(parents=True, exist_ok=True)
     raw = REPO / "results" / "raw"
     raw.mkdir(parents=True, exist_ok=True)
     model = loader()
     hooks = manipulation_hooks(args.manip, model.cfg.n_layers)
     dirs = list(unit_directions(model.cfg.d_model, CFG.n_dirs, CFG.dir_seed))
-    passages = load_passages()[: args.n_passages]
+    passages = (load_passages(REPO / args.passages) if args.passages else load_passages())[: args.n_passages]
     phases = ["calib", "main", "gating"] if args.phase == "all" else [args.phase]
-    meta = {"variant": v.label, "manip": args.manip, "env": env_info()}
+    meta = {"variant": v.label, "manip": args.manip, "env": env_info(),
+            "passages_manifest": args.passages or "stimuli/wikitext_manifest.json"}
 
     if "calib" in phases:
         t0 = time.time()
@@ -362,7 +381,8 @@ def main() -> None:
     if "main" in phases:
         t0 = time.time()
         lat = main_grid(model, hooks, passages, dirs, eps, k_stride=args.k_stride)
-        np.savez_compressed(raw / f"m2_{name}.npz", **{f"k{k}": v for k, v in lat.items()})
+        tag = "m2" if args.out_root == "results/m2" else args.out_root.rstrip("/").split("/")[-1]
+        np.savez_compressed(raw / f"{tag}_{name}.npz", **{f"k{k}": v for k, v in lat.items()})
         if args.mamba:  # PREREG-2 C: primary = depth stride 2 (even k, every second slice); secondary = full
             from rgc.config_prereg2 import CFG2
             st = CFG2.mamba_depth_stride
@@ -375,7 +395,7 @@ def main() -> None:
                 res["full_resolution"] = "skipped: injections only at k_stride=%d layers" % args.k_stride
             res["depth_stride"] = st
         else:
-            res = analyse_main(lat, model.cfg.n_layers, args.workers)
+            res = analyse_main(lat, model.cfg.n_layers, args.workers, dm_frac=args.dm_frac)
         ce = next_token_ce(model, hooks, passages)
         res.update({"ce_mean": float(np.mean(ce)), "ce_per_passage": ce})
         (out_dir / "main.json").write_text(json.dumps({**meta, "eps_star": eps, **res, "seconds": time.time() - t0}, indent=1))

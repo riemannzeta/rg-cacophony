@@ -99,11 +99,29 @@ def pci(gain: np.ndarray, p: int, theta: float) -> float:
     return normalised_lz(lattice_bits(gain, p, theta))
 
 
+def lattice_bits_density(gain: np.ndarray, p: int, frac: float) -> np.ndarray:
+    """Density-matched binarisation (PREREG-3 secondary): the top `frac` of downstream sites are on.
+
+    Same site set and layer-major order as `lattice_bits`; exactly round(frac * n) sites are on, ties
+    broken by position in the flattened order (stable sort), so p1 is fixed and PCI measures arrangement.
+    """
+    g = gain[1:, p + 1 :].reshape(-1)
+    n_on = int(round(frac * g.size))
+    bits = np.zeros(g.size, dtype=np.uint8)
+    if n_on:
+        bits[np.argsort(-g, kind="stable")[:n_on]] = 1
+    return bits
+
+
 def pci_task(args) -> list[tuple[float, float]]:
-    """(gain lattice, p, thetas) -> [(PCI, p1) per theta]. Module-level so worker pools can pickle it."""
-    gain, p, thetas = args
+    """(gain lattice, p, thetas[, dm_frac]) -> [(PCI, p1) per theta] (+ [(PCI_dm, frac)] if dm_frac).
+
+    Module-level so worker pools can pickle it."""
+    gain, p, thetas = args[:3]
     out = []
     for th in thetas:
         bits = lattice_bits(gain, p, th)
         out.append((normalised_lz(bits), float(bits.mean()) if bits.size else 0.0))
+    if len(args) > 3 and args[3]:
+        out.append((normalised_lz(lattice_bits_density(gain, p, args[3])), float(args[3])))
     return out

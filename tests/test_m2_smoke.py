@@ -110,3 +110,15 @@ def test_mamba_backend_through_s3(s3):
     assert "pci_primary" in res
     ce = s3.next_token_ce(m, [], passages)
     assert np.isfinite(ce).all()
+
+
+def test_prereg3_outputs(tiny, s3):
+    passages = load_passages()[:2]
+    dirs = list(unit_directions(32, 2, 11))
+    lat = s3.main_grid(tiny, [], passages, dirs, 1e-3)
+    res = s3.analyse_main(lat, 3, workers=1, dm_frac=0.2)
+    assert np.array(res["per_passage_dir_pci_dm"]).shape == (2, 2)
+    assert np.array(res["per_passage_dir_reach_by_theta"]["0.01"]).shape == (2, 2)
+    assert np.array(res["per_passage_dir_seff"]).shape == (2, 2)
+    res0 = s3.analyse_main(lat, 3, workers=1)  # without dm: pre-registered outputs unchanged
+    assert res0["per_passage_dir_pci_primary"] == res["per_passage_dir_pci_primary"]

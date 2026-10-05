@@ -12,6 +12,7 @@ import numpy as np
 
 from rgc.config import CFG
 from rgc.config_prereg2 import CFG2
+from rgc.config_prereg3 import CFG3
 from rgc.determinism import REPO, env_info
 from rgc.stats import ci
 
@@ -190,6 +191,37 @@ def main() -> None:
                 lo, hi = ci(d)
                 D[f"z {names[i]} - {names[j]}"] = {"ci": [float(lo), float(hi)], "n_finite": int(d.size)}
 
+    # ---- PREREG-3 (fresh-data replication at theta = 0.01) -------------------------------------
+    F = card["PREREG-3"] = {}
+    fr = REPO / CFG3.out_root
+    fm = {d.name: load(d / "main.json") for d in fr.iterdir() if (d / "main.json").exists()} if fr.exists() else {}
+    th = str(CFG3.theta_primary)
+    get = lambda spec: fm.get(TRAINED if spec is None else f"{TRAINED}__{spec}")
+    names = [None] + [f"beta={b:g}" for b in CFG3.betas if b != 1.0] + [f"window={w}" for w in CFG3.windows_run]
+    if all(get(n) for n in names):
+        pci = {n: np.array(get(n)["per_passage_dir_pci_by_theta"][th]) for n in names}
+        reach = {n: np.array(get(n)["per_passage_dir_reach_by_theta"][th]) for n in names}
+        seff = {n: np.array(get(n)["per_passage_dir_seff"]) for n in names}
+        r1 = paired_boot(pci[None], pci["beta=0"])
+        st1, st0 = np.stack([pci[None], reach[None]], -1), np.stack([pci["beta=0"], reach["beta=0"]], -1)
+        ratio = paired_boot(st0, st1, fn=lambda a, b: a[..., 0].mean() / b[..., 0].mean() - a[..., 1].mean() / b[..., 1].mean())
+        sdiff = paired_boot(seff["beta=0"], seff[None])
+        pts = [float(pci[n].mean()) for n in (None, "beta=0.5", "beta=0.25", "beta=0")]
+        r3 = paired_boot(pci[None], pci["beta=0"])
+        steps = [paired_boot(pci[a], pci[b]) for a, b in ((None, "window=64"), ("window=64", "window=16"))]
+        F["R1"] = {"pci_intact_minus_beta0": r1, "pass": r1["ci"][0] > 0}
+        F["R2"] = {"pci_ratio_minus_reach_ratio": ratio, "seff_beta0_minus_intact": sdiff,
+                   "pass": ratio["ci"][1] < 0 and sdiff["ci"][0] > 0}
+        F["R3"] = {"pci_by_beta": dict(zip(["1", "0.5", "0.25", "0"], pts)), "pci1_minus_pci0": r3,
+                   "pass": all(pts[i] > pts[i + 1] for i in range(3)) and r3["ci"][0] > 0}
+        F["R4"] = {"adjacent": steps, "pass": all(s_["ci"][0] > 0 for s_ in steps)}
+        dm = {n: np.array(get(n)["per_passage_dir_pci_dm"]) for n in (None, "beta=0")}
+        F["secondary_density_matched"] = {"pci_dm_intact_minus_beta0": paired_boot(dm[None], dm["beta=0"])}
+        F["levels"] = {str(n): {"pci": float(pci[n].mean()), "reach": float(reach[n].mean()), "seff": float(seff[n].mean())}
+                       for n in names}
+    else:
+        F["pending"] = [str(n) for n in names if not get(n)]
+
     (R / "scorecard.json").write_text(json.dumps(card, indent=1, default=float))
     lines = ["# Scorecard (mechanical; see scripts/s4_compare.py)", ""]
     def emit(name, d):
@@ -203,6 +235,8 @@ def main() -> None:
     for part in ("A", "B"):
         for k, v in card["PREREG-2"][part].items():
             emit(f"PREREG-2 {k}", v)
+    for k, v in card["PREREG-3"].items():
+        emit(f"PREREG-3 {k}", v)
     (R / "SCORECARD.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
 

@@ -52,14 +52,17 @@ def articles(lines: list[str]) -> list[dict]:
     return out
 
 
-def build_manifest(tok) -> dict:
+def build_manifest(tok, splits=None, max_lines: int | None = None, rule: str | None = None) -> dict:
+    """splits: dataset splits walked in order (default: CFG.wikitext_splits). max_lines: only the first
+    max_lines lines of each split are parsed (dataset order is preserved; used for the large train split)."""
     from datasets import load_dataset
 
     passages, fingerprints, n_lines = [], {}, {}
-    for split in CFG.wikitext_splits:
+    for split in splits or CFG.wikitext_splits:
         ds = load_dataset("Salesforce/wikitext", CFG.wikitext_config, split=split)
         fingerprints[split], n_lines[split] = getattr(ds, "_fingerprint", None), len(ds)
-        _collect(tok, split, ds["text"], passages)
+        lines = ds["text"] if max_lines is None else ds[:max_lines]["text"]
+        _collect(tok, split, lines, passages)
         if len(passages) == CFG.n_passages:
             break
     assert len(passages) == CFG.n_passages
@@ -67,10 +70,10 @@ def build_manifest(tok) -> dict:
     return {
         "dataset": "Salesforce/wikitext",
         "config": CFG.wikitext_config,
-        "splits": list(CFG.wikitext_splits),
+        "splits": list(splits or CFG.wikitext_splits),
         "dataset_fingerprints": fingerprints,
         "n_lines": n_lines,
-        "rule": __doc__.strip(),
+        "rule": rule or __doc__.strip(),
         "passage_tokens": CFG.passage_tokens,
         "sha256_all": hashlib.sha256(json.dumps(all_ids).encode()).hexdigest(),
         "passages": passages,
