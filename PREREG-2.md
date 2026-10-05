@@ -1,6 +1,12 @@
 # PREREG-2.md — addendum pre-registration
 
-**Status:** DRAFT, awaiting the user's predictions and sign-off. It will be committed before any data for these tests are generated, and before Stage 3, so before any trained-model PCI lattice has been seen.
+**Status:** SIGNED OFF by the user on 2026-10-05. Committed before any data for these tests were generated, and before Stage 3, so before any PCI lattice of any model had been seen.
+
+**The user's answers (2026-10-05):**
+- **A:** agrees with A1–A4.
+- **B:** agrees with B1–B4 (B3 stays labelled exploratory, as drafted).
+- **C:** no prediction, so C1–C3 are **exploratory**: reported with CIs, not scored.
+- **D:** no prediction, so D1 is **exploratory**: reported with CIs, not scored.
 
 **Relationship to PREDICTIONS.md:**
 - PREDICTIONS.md is unchanged, and its results are scored as registered.
@@ -36,7 +42,7 @@
 
 **All contrasts:** paired crossed bootstrap over passages and directions (10,000 resamples), each condition vs. intact.
 
-**Predictions** (user to confirm, edit or reject; each scored separately):
+**Predictions** (confirmed by the user; each scored separately):
 - **A1 (positive control):** PCI falls monotonically as the window shrinks: PCI(∞) > PCI(64) > PCI(16) > PCI(4), with each adjacent paired difference's CI excluding 0.
 - **A2 (key test):** PCI(β = 0) < PCI(intact), with the CI excluding 0, **and** PCI falls proportionally more than reach: PCI(β=0)/PCI(intact) < reach(β=0)/reach(intact), with the bootstrap CI of the difference of the two ratios excluding 0.
 - **A3 (dose-response):** PCI(1) ≥ PCI(0.5) ≥ PCI(0.25) ≥ PCI(0) (point estimates), with PCI(1) − PCI(0.25) > 0 (CI excluding 0).
@@ -80,7 +86,7 @@ In the language of physics, we look for **saturation** of the response to the fi
 - **Recency** ρ(L) = t̄(A,B) − t̄(B,A): negative means the later cue wins.
 - **CIs:** bootstrap over frames within word (10,000 resamples).
 
-**Predictions** (user to confirm, edit or reject):
+**Predictions** (confirmed by the user):
 - **B1 (saturation):** in the trained model, the maximum over slices of R_target(L) − R_control(L) is > 0, with the CI excluding 0. The ambiguous word saturates more than the neutral control token.
 - **B2 (decisiveness):** at some slice, D_target − D_control > 0 with the CI excluding 0. That slice is identified from the pooled curve, and its CI is taken at that fixed slice.
 - **B3 (bimodality):** BC_target > 0.555 at some slice. **Exploratory:** BC has low power with 16 conflict prompts per word.
@@ -109,17 +115,17 @@ In the language of physics, we look for **saturation** of the response to the fi
 
 **Protocol:** otherwise identical to M2, including the ε* rule, θ_primary, and a primary PCI over k ≤ (depth steps − 3).
 
-**Predictions** (user to state):
-- **C1:** PCI(Mamba-130M) vs. PCI(Pythia-160M): direction [USER], with the paired CI excluding 0.
-- **C2:** the same direction holds for 370M vs. 410M.
-- **C3:** PCI(Mamba-130M) > PCI of each shuffled Mamba-130M, with CIs excluding 0.
+**Predictions:** none. The user chose to make no prediction. All of the following are reported with paired CIs and are **exploratory**:
+- **C1:** PCI(Mamba-130M) − PCI(Pythia-160M).
+- **C2:** the same for 370M vs. 410M.
+- **C3:** PCI(Mamba-130M) − PCI of each shuffled Mamba-130M.
 
 ---
 
 ## D. Is z stable across scale ("universality")?
 
 - **Models:** Pythia-410M and Pythia-1B at step 143000, with the M2 protocol unchanged (primary cell k=0, p=64, θ_primary).
-- **D1 (user's original stretch hypothesis):** z is the same across 160M, 410M and 1B. Operationally, the pairwise bootstrap CIs of the z differences all include 0, *and* each model separately meets the PREDICTIONS.md (d) stability criteria.
+- **D1 (exploratory; the user made no prediction):** is z the same across 160M, 410M and 1B? Operationally, the pairwise bootstrap CIs of the z differences all include 0, *and* each model separately meets the PREDICTIONS.md (d) stability criteria.
 - **If (d) fails for 160M,** D1 is reported as not testable rather than as failed.
 
 ---
@@ -128,7 +134,7 @@ In the language of physics, we look for **saturation** of the response to the fi
 - **A recurrent (autoregressive) perturbation protocol:** perturb at token t and track internal states across later generated tokens, with the loop closed vs. open (teacher-forced).
 - **Coarse-graining / causal emergence:** Rosas et al.'s Ψ across grains (neurons → heads → layer → sense direction), using depth as time. This aims at the paper's question of which grain matters.
 
-## New constants (added to `config.py` at sign-off)
+## New constants (in `src/rgc/config_prereg2.py`, so the PREDICTIONS.md config hash is unchanged)
 - **Section A:** β grid (1, 0.5, 0.25, 0); w grid (∞, 64, 16, 4); local-response floor 0.5.
 - **Section B:** 16 frames (8 train / 8 test); 8 cue phrases per sense; 8 neutral fillers; BC threshold 0.555.
 - **Section C:** model IDs; depth stride 2; shuffle seeds 1001–1003.
