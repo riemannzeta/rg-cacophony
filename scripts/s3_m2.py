@@ -191,6 +191,7 @@ def analyse_main(lat: dict, nL: int, workers: int) -> dict:
         "pci_by_k_primary_theta": PCI[..., ti].mean(axis=(1, 2, 3)).tolist(),
         "pci_by_p_primary_theta": PCI[: kmax + 1, ..., ti].mean(axis=(0, 1, 3)).tolist(),
         "per_passage_dir_pci_primary": per_nd[:, :, ti].tolist(),  # for paired comparisons in s4
+        "per_passage_dir_pci_by_theta": {str(th): per_nd[:, :, j].tolist() for j, th in enumerate(thetas)},
         "per_passage_dir_reach_primary": reach_nd.tolist(),
         "per_passage_dir_local_response": local_nd.tolist(),
         "reach_primary": float(reach_nd.mean()),
