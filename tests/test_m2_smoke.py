@@ -71,3 +71,14 @@ def test_gating_runs(tiny, s3, tmp_path):
     assert g["k_before"] == max(0, g["L_star_trained"] - 2)
     assert set(g["conditions"]) == {"before", "after"}
     assert np.isfinite(g["contrast_after_minus_before_pci_random"]["mean"])
+
+
+def test_main_outputs_reach_local_and_ce(tiny, s3):
+    passages = load_passages()[:2]
+    dirs = list(unit_directions(32, 2, 11))
+    lat = s3.main_grid(tiny, [], passages, dirs, 1e-3)
+    res = s3.analyse_main(lat, 3, workers=1)
+    assert np.array(res["per_passage_dir_reach_primary"]).shape == (2, 2)
+    assert np.array(res["per_passage_dir_local_response"]).shape == (2, 2)
+    ce = s3.next_token_ce(tiny, manipulation_hooks("beta=0", 3), passages)
+    assert len(ce) == 2 and all(np.isfinite(ce))

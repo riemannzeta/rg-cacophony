@@ -129,6 +129,11 @@ def analyse_main(lat: dict, nL: int, workers: int) -> dict:
         return np.array([M[idx_n[b]][:, idx_d[b]].mean() for b in range(CFG.n_boot)])
 
     per_nd = PCI[: kmax + 1, :, :, :, :].mean(axis=(0, 2))  # [N, nD, theta]
+    # PREREG-2 (A): reach = mean p1 over the primary lattices; local response = self-column gain at
+    # the final slice (the perturbed position's own response), both per (passage, direction).
+    reach_nd = P1[: kmax + 1, ..., ti].mean(axis=(0, 2))  # [N, nD]
+    local_nd = np.mean([[lat[k][:, ip, :, -1, p] for ip, p in enumerate(CFG.p_grid)] for k in range(kmax + 1)],
+                       axis=(0, 1))  # [N, nD]
     pci_theta = []
     for j, th in enumerate(thetas):
         boot = crossed_boot(per_nd[:, :, j])
@@ -186,11 +191,27 @@ def analyse_main(lat: dict, nL: int, workers: int) -> dict:
         "pci_by_k_primary_theta": PCI[..., ti].mean(axis=(1, 2, 3)).tolist(),
         "pci_by_p_primary_theta": PCI[: kmax + 1, ..., ti].mean(axis=(0, 1, 3)).tolist(),
         "per_passage_dir_pci_primary": per_nd[:, :, ti].tolist(),  # for paired comparisons in s4
+        "per_passage_dir_reach_primary": reach_nd.tolist(),
+        "per_passage_dir_local_response": local_nd.tolist(),
+        "reach_primary": float(reach_nd.mean()),
+        "local_response": float(local_nd.mean()),
         "per_passage_dir_auc": auc_nd.tolist(),
         "z": z_summary,
         "spread": spread,
         "self_column_gain_k_p64": self_col,
     }
+
+
+@torch.no_grad()
+def next_token_ce(model, hooks, passages) -> list[float]:
+    """Mean next-token cross-entropy per passage (descriptive manipulation check, PREREG-2 A)."""
+    bos, out = model.tokenizer.bos_token_id, []
+    for i in range(0, len(passages), 8):
+        toks = torch.stack([seq(ids, bos) for ids in passages[i : i + 8]]).to(model.cfg.device)
+        logits = model.run_with_hooks(toks, fwd_hooks=list(hooks))
+        ce = torch.nn.functional.cross_entropy(logits[:, :-1].transpose(1, 2).float(), toks[:, 1:], reduction="none")
+        out += ce.mean(1).tolist()
+    return out
 
 
 # ---------------------------------------------------------------------------------------------
@@ -310,6 +331,8 @@ def main() -> None:
         lat = main_grid(model, hooks, passages, dirs, eps)
         np.savez_compressed(raw / f"m2_{name}.npz", **{f"k{k}": v for k, v in lat.items()})
         res = analyse_main(lat, model.cfg.n_layers, args.workers)
+        ce = next_token_ce(model, hooks, passages)
+        res.update({"ce_mean": float(np.mean(ce)), "ce_per_passage": ce})
         (out_dir / "main.json").write_text(json.dumps({**meta, "eps_star": eps, **res, "seconds": time.time() - t0}, indent=1))
         print("main done")
     if "gating" in phases:
