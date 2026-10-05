@@ -65,6 +65,24 @@ class Config:
     gating_after: int = 1  # k = L* + 1
     gating_window: int = 3
 
+    eps_ref_f64: float = 1e-6  # float64 finite-difference reference gain for the linear regime
+    linear_site_min_gain: float = 0.01  # sites entering the linear-regime check
+    fit_min_points: int = 4
+
+    # --- pass criteria (PREDICTIONS.md) --------------------------------------------------------
+    band_frac: float = 0.5  # band = shortest block run holding >= 50% of the rise
+    band_max_width: int = 3  # a1
+    ablation_min_effect: float = 0.5  # a3
+    null_percentile: float = 95.0  # a3, b2
+    b1_peak_ratio: float = 0.2  # b1
+    alpha: float = 0.05
+    n_perm: int = 10_000
+    d_min_fittable: float = 0.8
+    d_max_cv: float = 0.25
+    d_max_ci_halfwidth: float = 0.15
+    d_min_median_r2: float = 0.9
+    aic_decisive: float = 4.0
+
     # --- statistics ---------------------------------------------------------------------------
     n_boot: int = 10_000
     boot_seed: int = 12345
