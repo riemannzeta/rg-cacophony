@@ -39,3 +39,45 @@ An append-only log of every choice that departs from, or fills a gap in, the app
 - **Excluded:** buffers (rotary `inv_freq`) are not parameters and are untouched.
 - **Check:** all 148/148 tensors change and each is an exact permutation of the original.
 - **Constant tensors:** a tensor whose values are all equal (e.g. step-0 LN weights of all ones) is unchanged by construction.
+
+## D8 — 2026-10-04 — " crane" replaced by " palm" (no results seen)
+- **Why:** in the Pythia tokenizer `" crane"` is two tokens (`' cr'` + `'ane'`), so it fails the single-token requirement. The other nine candidates are single tokens.
+- **Replacement:** `" palm"` (single token, id 19992), with the noun senses *hand* and *tree*. It was chosen to keep 10 words, before any model forward pass on stimuli.
+- **Senses used:**
+  - bank: river / money
+  - bat: animal / sport
+  - pitcher: baseball / jug
+  - seal: animal / closure
+  - spring: season / coil
+  - match: contest / fire
+  - mole: animal / skin
+  - pen: writing / enclosure
+  - bark: tree / dog
+  - palm: hand / tree
+- The tokenizer vocabulary was verified identical at steps 0, 512, 4000 and 143000.
+
+## D9 — 2026-10-04 — WikiText passages: test split, then validation (no results seen)
+- **Why:** the WikiText-103 test split has only 62 articles, and 61 of them have ≥256 tokens, so the planned "64 test passages, one per article" cannot be met from test alone.
+- **Rule:** take all qualifying test articles in order, then validation articles in order, until there are 64. That gives 61 test + 3 validation.
+- **Unchanged:**
+  - one passage per article, so passages are independent units for the bootstrap;
+  - each passage is the first 256 tokens of the article body;
+  - text is detokenised with the standard WikiText detokeniser from lm-evaluation-harness.
+- **Recorded:** the token IDs, titles and SHA256 hashes are in `stimuli/wikitext_manifest.json`.
+
+## D10 — 2026-10-04 — Stimulus design details (no results seen)
+- **Minimal pairs:**
+  - Each word has 30 frames (20 train, 10 test). Each frame is filled once with a sense-A cue phrase and once with a sense-B cue phrase.
+  - Frame words are therefore identical across senses, and target positions differ by 0.7–2.3 tokens on average within a pair.
+  - Both members of a pair get the same continuation.
+- **Split disjointness:**
+  - Test frames differ from train frames.
+  - After stemming, *every* content word in a word's test cue phrases (not only the bracketed cues) is absent from that word's train cue phrases. This is checked by `stimuli.build()`, and validation fails on any overlap.
+  - Near-overlaps (shared prefixes of 4 or more letters, e.g. cave/cavern, fire/firewood) were removed by hand.
+  - No cue word is used for both senses of a word.
+- **Cue marking:** square brackets mark words that on their own point toward one sense. Cue mass is computed over the tokens of those words. Generic words (e.g. "window", "radio") were un-bracketed before any measurement.
+- **Neutral prompts:** 12 shared cue-free frames, used for every word.
+- **Control token:** `" thing"` (id 2181). The control prompt is identical to the target prompt except at the target position.
+- **Continuations:** four sense-neutral continuations of 28–29 tokens.
+- **Prompt length:** 15–19 tokens including BOS, at the target position.
+- **Known orthographic overlap:** `" pencil"` (a writing cue for *pen*) contains "pen". It is a different token and a legitimate cue, so it is kept.

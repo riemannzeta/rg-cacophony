@@ -40,7 +40,7 @@ class Config:
     n_passages: int = 64
     passage_tokens: int = 256  # content tokens; sequence length is passage_tokens + 1 with BOS
     wikitext_config: str = "wikitext-103-raw-v1"
-    wikitext_split: str = "test"
+    wikitext_splits: tuple[str, ...] = ("test", "validation")  # in this order (D9)
     # Injection positions are SEQUENCE positions (BOS is position 0).
     p_grid: tuple[int, ...] = (16, 64, 128)
     n_dirs: int = 8

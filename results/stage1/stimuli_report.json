@@ -1,0 +1,514 @@
+{
+  "env": {
+    "git_sha": "bdd6084d3fd2dbba1dceaf69399cb59ddbea848c-dirty",
+    "config_hash": "616d0c78854b0e43",
+    "host": "macbookair.lan",
+    "python": "3.12.12",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "device": "cpu",
+    "cuda": null,
+    "packages": {
+      "torch": "2.14.1",
+      "transformer-lens": "3.9.0",
+      "transformers": "5.18.0",
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "pandas": "3.0.6",
+      "datasets": "5.0.1"
+    },
+    "deterministic": false
+  },
+  "candidate_tokenisation": {
+    "bank": {
+      "ids": [
+        4310
+      ],
+      "pieces": [
+        " bank"
+      ],
+      "single": true
+    },
+    "bat": {
+      "ids": [
+        10464
+      ],
+      "pieces": [
+        " bat"
+      ],
+      "single": true
+    },
+    "crane": {
+      "ids": [
+        1531,
+        1351
+      ],
+      "pieces": [
+        " cr",
+        "ane"
+      ],
+      "single": false
+    },
+    "pitcher": {
+      "ids": [
+        31021
+      ],
+      "pieces": [
+        " pitcher"
+      ],
+      "single": true
+    },
+    "seal": {
+      "ids": [
+        14393
+      ],
+      "pieces": [
+        " seal"
+      ],
+      "single": true
+    },
+    "spring": {
+      "ids": [
+        7203
+      ],
+      "pieces": [
+        " spring"
+      ],
+      "single": true
+    },
+    "match": {
+      "ids": [
+        3761
+      ],
+      "pieces": [
+        " match"
+      ],
+      "single": true
+    },
+    "mole": {
+      "ids": [
+        3478
+      ],
+      "pieces": [
+        " mole"
+      ],
+      "single": true
+    },
+    "pen": {
+      "ids": [
+        4331
+      ],
+      "pieces": [
+        " pen"
+      ],
+      "single": true
+    },
+    "bark": {
+      "ids": [
+        21939
+      ],
+      "pieces": [
+        " bark"
+      ],
+      "single": true
+    },
+    "palm": {
+      "ids": [
+        19992
+      ],
+      "pieces": [
+        " palm"
+      ],
+      "single": true
+    }
+  },
+  "dropped": {
+    "crane": "not a single token (' cr' + 'ane')"
+  },
+  "stimuli": {
+    "words": {
+      "bank": {
+        "token_id": [
+          4310
+        ],
+        "single_token": true,
+        "senses": [
+          "river",
+          "money"
+        ],
+        "n_cue_words": {
+          "train": {
+            "river": 20,
+            "money": 21
+          },
+          "test": {
+            "river": 16,
+            "money": 17
+          }
+        },
+        "mean_target_pos": {
+          "river": 18.6,
+          "money": 17.033333333333335
+        },
+        "mean_n_cue_tokens": {
+          "river": 2.7,
+          "money": 1.9666666666666666
+        },
+        "pair_target_pos_absdiff_mean": 1.9
+      },
+      "bat": {
+        "token_id": [
+          10464
+        ],
+        "single_token": true,
+        "senses": [
+          "animal",
+          "sport"
+        ],
+        "n_cue_words": {
+          "train": {
+            "animal": 23,
+            "sport": 27
+          },
+          "test": {
+            "animal": 19,
+            "sport": 19
+          }
+        },
+        "mean_target_pos": {
+          "animal": 18.3,
+          "sport": 17.166666666666668
+        },
+        "mean_n_cue_tokens": {
+          "animal": 3.2333333333333334,
+          "sport": 2.7666666666666666
+        },
+        "pair_target_pos_absdiff_mean": 2.066666666666667
+      },
+      "pitcher": {
+        "token_id": [
+          31021
+        ],
+        "single_token": true,
+        "senses": [
+          "baseball",
+          "jug"
+        ],
+        "n_cue_words": {
+          "train": {
+            "baseball": 31,
+            "jug": 30
+          },
+          "test": {
+            "baseball": 20,
+            "jug": 18
+          }
+        },
+        "mean_target_pos": {
+          "baseball": 16.7,
+          "jug": 16.733333333333334
+        },
+        "mean_n_cue_tokens": {
+          "baseball": 2.9,
+          "jug": 2.7666666666666666
+        },
+        "pair_target_pos_absdiff_mean": 1.1666666666666667
+      },
+      "seal": {
+        "token_id": [
+          14393
+        ],
+        "single_token": true,
+        "senses": [
+          "animal",
+          "closure"
+        ],
+        "n_cue_words": {
+          "train": {
+            "animal": 22,
+            "closure": 27
+          },
+          "test": {
+            "animal": 17,
+            "closure": 17
+          }
+        },
+        "mean_target_pos": {
+          "animal": 16.1,
+          "closure": 15.7
+        },
+        "mean_n_cue_tokens": {
+          "animal": 2.433333333333333,
+          "closure": 2.4
+        },
+        "pair_target_pos_absdiff_mean": 1.8
+      },
+      "spring": {
+        "token_id": [
+          7203
+        ],
+        "single_token": true,
+        "senses": [
+          "season",
+          "coil"
+        ],
+        "n_cue_words": {
+          "train": {
+            "season": 24,
+            "coil": 24
+          },
+          "test": {
+            "season": 15,
+            "coil": 17
+          }
+        },
+        "mean_target_pos": {
+          "season": 16.266666666666666,
+          "coil": 15.633333333333333
+        },
+        "mean_n_cue_tokens": {
+          "season": 3.0,
+          "coil": 2.2666666666666666
+        },
+        "pair_target_pos_absdiff_mean": 1.4333333333333333
+      },
+      "match": {
+        "token_id": [
+          3761
+        ],
+        "single_token": true,
+        "senses": [
+          "contest",
+          "fire"
+        ],
+        "n_cue_words": {
+          "train": {
+            "contest": 33,
+            "fire": 26
+          },
+          "test": {
+            "contest": 15,
+            "fire": 15
+          }
+        },
+        "mean_target_pos": {
+          "contest": 14.9,
+          "fire": 15.833333333333334
+        },
+        "mean_n_cue_tokens": {
+          "contest": 2.066666666666667,
+          "fire": 2.1
+        },
+        "pair_target_pos_absdiff_mean": 1.5333333333333334
+      },
+      "mole": {
+        "token_id": [
+          3478
+        ],
+        "single_token": true,
+        "senses": [
+          "animal",
+          "skin"
+        ],
+        "n_cue_words": {
+          "train": {
+            "animal": 22,
+            "skin": 21
+          },
+          "test": {
+            "animal": 15,
+            "skin": 15
+          }
+        },
+        "mean_target_pos": {
+          "animal": 16.033333333333335,
+          "skin": 15.6
+        },
+        "mean_n_cue_tokens": {
+          "animal": 2.566666666666667,
+          "skin": 2.1666666666666665
+        },
+        "pair_target_pos_absdiff_mean": 1.2333333333333334
+      },
+      "pen": {
+        "token_id": [
+          4331
+        ],
+        "single_token": true,
+        "senses": [
+          "writing",
+          "enclosure"
+        ],
+        "n_cue_words": {
+          "train": {
+            "writing": 22,
+            "enclosure": 21
+          },
+          "test": {
+            "writing": 13,
+            "enclosure": 15
+          }
+        },
+        "mean_target_pos": {
+          "writing": 15.4,
+          "enclosure": 15.366666666666667
+        },
+        "mean_n_cue_tokens": {
+          "writing": 1.9333333333333333,
+          "enclosure": 2.033333333333333
+        },
+        "pair_target_pos_absdiff_mean": 0.7
+      },
+      "bark": {
+        "token_id": [
+          21939
+        ],
+        "single_token": true,
+        "senses": [
+          "tree",
+          "dog"
+        ],
+        "n_cue_words": {
+          "train": {
+            "tree": 23,
+            "dog": 15
+          },
+          "test": {
+            "tree": 14,
+            "dog": 13
+          }
+        },
+        "mean_target_pos": {
+          "tree": 15.7,
+          "dog": 16.266666666666666
+        },
+        "mean_n_cue_tokens": {
+          "tree": 2.1666666666666665,
+          "dog": 2.566666666666667
+        },
+        "pair_target_pos_absdiff_mean": 1.5666666666666667
+      },
+      "palm": {
+        "token_id": [
+          19992
+        ],
+        "single_token": true,
+        "senses": [
+          "hand",
+          "tree"
+        ],
+        "n_cue_words": {
+          "train": {
+            "hand": 21,
+            "tree": 17
+          },
+          "test": {
+            "hand": 14,
+            "tree": 14
+          }
+        },
+        "mean_target_pos": {
+          "hand": 15.466666666666667,
+          "tree": 15.366666666666667
+        },
+        "mean_n_cue_tokens": {
+          "hand": 2.2666666666666666,
+          "tree": 2.2333333333333334
+        },
+        "pair_target_pos_absdiff_mean": 1.2333333333333334
+      }
+    },
+    "errors": [],
+    "warnings": [
+      "pen: cue word 'pencil' contains target",
+      "pen: cue word 'pencil' contains target"
+    ],
+    "n_prompts": 720,
+    "continuation_tokens": [
+      28,
+      29,
+      29,
+      29
+    ],
+    "control_token": {
+      "text": " thing",
+      "ids": [
+        2181
+      ]
+    }
+  },
+  "counts": {
+    "train": 400,
+    "test": 200,
+    "neutral": 120
+  },
+  "wikitext": {
+    "n_passages": 64,
+    "sha256_all": "57149fb69c0347861d8514373d9aad4a8bbe49bee806fc8b976af798e774f954",
+    "titles": [
+      "Robert Boulter",
+      "Du Fu",
+      "Kiss You ( One Direction song )",
+      "Ise @-@ class battleship",
+      "Dick Rifenburg",
+      "1933 Treasure Coast hurricane",
+      "Second Battle of Naktong Bulge",
+      "Hed PE",
+      "Ironclad warship",
+      "Little Gidding ( poem )",
+      "The Portage to San Cristobal of A.H.",
+      "Temnospondyli",
+      "Osbert de Bayeux",
+      "Dvorak technique",
+      "New York State Route 31B",
+      "Ben Amos",
+      "Clayton Kershaw",
+      "Josepha Petrick Kemarre",
+      "Head VI",
+      "Imagism",
+      "Operation Eastern Exit",
+      "2010 Claxton Shield",
+      "Independiente ( Ricardo Arjona album )",
+      "2003 Pacific typhoon season",
+      "Oxaziridine",
+      "Battle of D\u00fcrenstein",
+      "Brock Lesnar",
+      "Constant k filter",
+      "1 henry and capacitance C",
+      "The Snowmen",
+      "No. 20 Squadron RAAF",
+      "Light Tank Mk VII Tetrarch",
+      "QuackShot",
+      "Olmec colossal heads",
+      "Brad Stevens",
+      "Shackleton ( crater )",
+      "American Beauty ( 1999 film )",
+      "Christopher Gore",
+      "Nero",
+      "Manila",
+      "Attalea ( palm )",
+      "The Heart of Ezra Greer",
+      "Free Derry",
+      "Come What ( ever ) May",
+      "Chad at the 2008 Summer Olympics",
+      "View of the World from 9th Avenue",
+      "Bintulu",
+      "Zrinski Battalion",
+      "Weevils Wobble But They Don 't Go Down",
+      "Temple Beth Israel ( Eugene , Oregon )",
+      "New York State Route 93",
+      "Operation USA",
+      "Typhoon Krosa ( 2013 )",
+      "Kirby 's Block Ball",
+      "Hannah Dodd",
+      "Commonwealth War Graves Commission",
+      "Tatwine",
+      "German Type UB I submarine",
+      "Military history of Gibraltar during World War II",
+      "Nerva",
+      "The Hustler ( film )",
+      "Homarus gammarus",
+      "Frank Headlam",
+      "M @-@ 82 ( Michigan highway )"
+    ]
+  }
+}
