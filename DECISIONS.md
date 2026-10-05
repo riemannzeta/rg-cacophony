@@ -81,3 +81,17 @@ An append-only log of every choice that departs from, or fills a gap in, the app
 - **Continuations:** four sense-neutral continuations of 28–29 tokens.
 - **Prompt length:** 15–19 tokens including BOS, at the target position.
 - **Known orthographic overlap:** `" pencil"` (a writing cue for *pen*) contains "pen". It is a different token and a legitimate cue, so it is kept.
+
+## D11 — 2026-10-05 — torch native DSL op overrides disabled (no results seen)
+- **Problem:** on CUDA, torch 2.14.1 routes some eager ops through runtime-compiled kernels instead of ATen:
+  - Triton `bmm` (hit by the HF rotary embedding);
+  - `native` `_foreach_mm` and `linalg_polar`.
+- **Symptom:** on the fresh AMI, the Triton build failed for lack of Python headers.
+- **Fix:** rather than install build tooling, `set_determinism()` deregisters every DSL override with `torch._native.registry.deregister_op_overrides`. All ops then run on standard ATen kernels, whose determinism under `use_deterministic_algorithms(True)` is documented.
+- **Recorded:** the disabled DSLs (`["native", "triton"]`) are written into every result's env block.
+
+## D12 — 2026-10-05 — Dedicated instance launched (no results seen)
+- **Instance:** `rgc-gpu` = <instance-id>, g5.xlarge (A10G), cloned from ml-dev's DL AMI, subnet, SG and key, with a 100 GB gp3 volume. Launched after the quota increase to 8 vCPUs was granted.
+- **Tooling:** uv 0.12.23, matching ml-dev.
+- **Code flow:** code reaches the box only via `git push gpu main`, so every run is at a committed SHA. `scripts/gpu.sh` handles start/stop/push/pull.
+- **Stage 0 on CUDA:** all checks pass for all 7 variants (`results/stage0/sanity_cuda.json`), including bitwise reproducibility, exact-zero ε=0 and causality responses, and unit tests run on the GPU.

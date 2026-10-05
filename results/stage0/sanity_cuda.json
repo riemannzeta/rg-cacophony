@@ -1,0 +1,133 @@
+{
+  "env": {
+    "git_sha": "54e7b97efae0ea21070a65a7efa6d1e923b1fe12",
+    "config_hash": "26fef58ef05e1363",
+    "host": "ip-172-31-28-143",
+    "python": "3.12.3",
+    "platform": "Linux-6.17.0-1009-aws-x86_64-with-glibc2.39",
+    "device": "NVIDIA A10G",
+    "cuda": "13.0",
+    "packages": {
+      "torch": "2.14.1",
+      "transformer-lens": "3.9.0",
+      "transformers": "5.18.0",
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "pandas": "3.0.6",
+      "datasets": "5.0.1"
+    },
+    "deterministic": true,
+    "native_overrides_disabled": [
+      "native",
+      "triton"
+    ]
+  },
+  "checkpoints_available": {
+    "step0": true,
+    "step143000": true,
+    "step4000": true,
+    "step512": true
+  },
+  "pytest": "24 passed, 2 warnings in 16.63s",
+  "pytest_ok": true,
+  "variants": [
+    {
+      "variant": "pythia-160m@step0",
+      "tl_vs_hf_rel_maxdiff": 1.3452100802169298e-06,
+      "W_E_fingerprint": -5.23327761888504,
+      "logit_fingerprint": 1.532836064696312,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 5.4569682106375694e-06,
+      "passed": true
+    },
+    {
+      "variant": "pythia-160m@step512",
+      "tl_vs_hf_rel_maxdiff": 9.642118357078289e-07,
+      "W_E_fingerprint": -5.352902591228485,
+      "logit_fingerprint": 4.949866354465485,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 6.984919309616089e-06,
+      "passed": true
+    },
+    {
+      "variant": "pythia-160m@step4000",
+      "tl_vs_hf_rel_maxdiff": 7.420272822855623e-07,
+      "W_E_fingerprint": -4.327446281909943,
+      "logit_fingerprint": 55.65242397785187,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 7.130438461899757e-06,
+      "passed": true
+    },
+    {
+      "variant": "pythia-160m@step143000",
+      "tl_vs_hf_rel_maxdiff": 4.698931206803536e-06,
+      "W_E_fingerprint": -12.158191204071045,
+      "logit_fingerprint": 5803.283579826355,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 5.165929906070232e-06,
+      "passed": true
+    },
+    {
+      "variant": "pythia-160m@step143000-shuffled1001",
+      "tl_vs_hf_rel_maxdiff": 1.0184737675444921e-06,
+      "W_E_fingerprint": 1.6293705105781555,
+      "logit_fingerprint": 65.97909808158875,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 3.4924596548080444e-06,
+      "shuffle_is_permutation": true,
+      "shuffle_tensors_changed": "148/148",
+      "passed": true
+    },
+    {
+      "variant": "pythia-160m@step143000-shuffled1002",
+      "tl_vs_hf_rel_maxdiff": 1.4228770623958553e-06,
+      "W_E_fingerprint": 5.579072952270508,
+      "logit_fingerprint": 67.23207533359528,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 9.313225746154785e-06,
+      "shuffle_is_permutation": true,
+      "shuffle_tensors_changed": "148/148",
+      "passed": true
+    },
+    {
+      "variant": "pythia-160m@step143000-shuffled1003",
+      "tl_vs_hf_rel_maxdiff": 1.0344549536966952e-06,
+      "W_E_fingerprint": 1.7798799276351929,
+      "logit_fingerprint": -35.502914130687714,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 7.275957614183426e-08,
+      "shuffle_is_permutation": true,
+      "shuffle_tensors_changed": "148/148",
+      "passed": true
+    }
+  ],
+  "all_passed": true
+}
