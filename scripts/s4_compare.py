@@ -28,7 +28,7 @@ def load(path: Path):
 def paired_boot(A: np.ndarray, B: np.ndarray, fn=lambda a, b: a.mean() - b.mean(), seed=CFG.boot_seed):
     """Crossed paired bootstrap over passages (rows) and directions (cols); same draws for A and B."""
     rng = np.random.default_rng(seed)
-    N, D = A.shape
+    N, D = A.shape[:2]
     out = np.empty(CFG.n_boot)
     for b in range(CFG.n_boot):
         i, j = rng.integers(0, N, N), rng.integers(0, D, D)
