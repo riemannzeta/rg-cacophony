@@ -1,0 +1,129 @@
+{
+  "env": {
+    "git_sha": "01fa229a7a9a4731973339209ed70d76795a2861",
+    "config_hash": "0b8dcab9bffc7953",
+    "host": "macbookair.lan",
+    "python": "3.12.12",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "device": "cpu",
+    "cuda": null,
+    "packages": {
+      "torch": "2.14.1",
+      "transformer-lens": "3.9.0",
+      "transformers": "5.18.0",
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "pandas": "3.0.6",
+      "datasets": "5.0.1"
+    },
+    "deterministic": true
+  },
+  "checkpoints_available": {
+    "step0": true,
+    "step143000": true,
+    "step4000": true,
+    "step512": true
+  },
+  "pytest": "19 passed, 2 warnings in 11.07s",
+  "pytest_ok": true,
+  "variants": [
+    {
+      "variant": "pythia-160m@step0",
+      "tl_vs_hf_rel_maxdiff": 1.7562475704835379e-06,
+      "W_E_fingerprint": -5.23327761888504,
+      "logit_fingerprint": 1.5328320264816284,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 5.602487362921238e-06,
+      "passed": true
+    },
+    {
+      "variant": "pythia-160m@step512",
+      "tl_vs_hf_rel_maxdiff": 9.7385407116235e-07,
+      "W_E_fingerprint": -5.352902591228485,
+      "logit_fingerprint": 4.949868321418762,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 6.912159733474255e-06,
+      "passed": true
+    },
+    {
+      "variant": "pythia-160m@step4000",
+      "tl_vs_hf_rel_maxdiff": 9.372973295285192e-07,
+      "W_E_fingerprint": -4.327446281909943,
+      "logit_fingerprint": 55.65243124961853,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 7.34871719032526e-06,
+      "passed": true
+    },
+    {
+      "variant": "pythia-160m@step143000",
+      "tl_vs_hf_rel_maxdiff": 6.361632586049382e-06,
+      "W_E_fingerprint": -12.158191204071045,
+      "logit_fingerprint": 5803.286229133606,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 5.820766091346741e-06,
+      "passed": true
+    },
+    {
+      "variant": "pythia-160m@step143000-shuffled1001",
+      "tl_vs_hf_rel_maxdiff": 1.3822138953401009e-06,
+      "W_E_fingerprint": 1.6293705105781555,
+      "logit_fingerprint": 65.97904944419861,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 3.5652192309498787e-06,
+      "shuffle_is_permutation": true,
+      "shuffle_tensors_changed": "148/148",
+      "passed": true
+    },
+    {
+      "variant": "pythia-160m@step143000-shuffled1002",
+      "tl_vs_hf_rel_maxdiff": 1.4584481959900586e-06,
+      "W_E_fingerprint": 5.579072952270508,
+      "logit_fingerprint": 67.2321035861969,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 9.240466170012951e-06,
+      "shuffle_is_permutation": true,
+      "shuffle_tensors_changed": "148/148",
+      "passed": true
+    },
+    {
+      "variant": "pythia-160m@step143000-shuffled1003",
+      "tl_vs_hf_rel_maxdiff": 1.2841513807870797e-06,
+      "W_E_fingerprint": 1.7798799276351929,
+      "logit_fingerprint": -35.50298535823822,
+      "bitwise_reproducible": true,
+      "hook_shapes_ok": true,
+      "clean_stack_reproducible": true,
+      "eps0_exact_zero": true,
+      "causal_exact_zero_before_p": true,
+      "injected_site_rel_err": 1.862645149230957e-07,
+      "shuffle_is_permutation": true,
+      "shuffle_tensors_changed": "148/148",
+      "passed": true
+    }
+  ],
+  "all_passed": true
+}
