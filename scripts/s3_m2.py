@@ -38,11 +38,25 @@ def seq(ids: list[int], bos: int) -> torch.Tensor:
     return torch.tensor([bos] + list(ids), dtype=torch.long)
 
 
+def respond(model, tokens, k, P, U, E, extra_hooks=None, chunk: int | None = None):
+    """Perturbation response for either backend (TransformerLens or the Mamba runner).
+
+    chunk: optional max rows per forward (memory); rows are processed in order, each chunk with
+    its own row-matched clean baseline.
+    """
+    fn = model.perturb_response if hasattr(model, "perturb_response") else (
+        lambda *a, **kw: perturb_response(model, *a, **kw))
+    if chunk is None or len(P) <= chunk:
+        return fn(tokens, k, P, U, E, extra_hooks=extra_hooks)
+    return torch.cat([fn(tokens, k, P[i:i + chunk], U[i:i + chunk], E[i:i + chunk], extra_hooks=extra_hooks)
+                      for i in range(0, len(P), chunk)])
+
+
 # ---------------------------------------------------------------------------------------------
 # calibration
 # ---------------------------------------------------------------------------------------------
 
-def calibrate(model, model64, hooks, passages, dirs) -> dict:
+def calibrate(model, model64, hooks, passages, dirs, chunk=None) -> dict:
     nL, eps_grid = model.cfg.n_layers, np.array(CFG.eps_grid)
     devs = {e: [] for e in range(len(eps_grid))}
     agree = {e: [0, 0] for e in range(len(eps_grid))}
@@ -56,12 +70,11 @@ def calibrate(model, model64, hooks, passages, dirs) -> dict:
                     for e in eps_grid:
                         P.append(p); U.append(u); E.append(e)
             P, U, E = torch.tensor(P), torch.stack(U), torch.tensor(E, dtype=torch.float32)
-            G32 = (perturb_response(model, tokens, k, P, U, E, extra_hooks=hooks) / E.to(model.cfg.device)[:, None, None]).cpu().numpy()
+            G32 = (respond(model, tokens, k, P, U, E, hooks, chunk) / E.to(model.cfg.device)[:, None, None]).cpu().numpy()
             P0 = torch.tensor([p for p in CFG.p_grid for _ in dirs])
             U0 = torch.stack([u for _ in CFG.p_grid for u in dirs])
             E0 = torch.full((len(P0),), CFG.eps_ref_f64, dtype=torch.float32)
-            Gref = (perturb_response(model64, tokens, k, P0, U0.double(), E0, extra_hooks=hooks)
-                    / CFG.eps_ref_f64).cpu().numpy()
+            Gref = (respond(model64, tokens, k, P0, U0.double(), E0, hooks, chunk) / CFG.eps_ref_f64).cpu().numpy()
             G32 = G32.reshape(len(CFG.p_grid), len(dirs), len(eps_grid), *G32.shape[1:])
             Gref = Gref.reshape(len(CFG.p_grid), len(dirs), *Gref.shape[1:])
             for ip, p in enumerate(CFG.p_grid):
@@ -94,7 +107,7 @@ def main_grid(model, hooks, passages, dirs, eps: float) -> dict:
             P = torch.tensor([p for p in CFG.p_grid for _ in dirs])
             U = torch.stack([u for _ in CFG.p_grid for u in dirs])
             E = torch.full((len(P),), eps, dtype=torch.float32)
-            G = (perturb_response(model, tokens, k, P, U, E, extra_hooks=hooks) / eps).cpu().numpy()
+            G = (respond(model, tokens, k, P, U, E, hooks) / eps).cpu().numpy()
             lattices[k].append(G.reshape(len(CFG.p_grid), len(dirs), *G.shape[1:]))
     return {k: np.stack(v) for k, v in lattices.items()}
 
@@ -209,7 +222,7 @@ def next_token_ce(model, hooks, passages) -> list[float]:
     bos, out = model.tokenizer.bos_token_id, []
     for i in range(0, len(passages), 8):
         toks = torch.stack([seq(ids, bos) for ids in passages[i : i + 8]]).to(model.cfg.device)
-        logits = model.run_with_hooks(toks, fwd_hooks=list(hooks))
+        logits = model.logits(toks) if hasattr(model, "logits") else model.run_with_hooks(toks, fwd_hooks=list(hooks))
         ce = torch.nn.functional.cross_entropy(logits[:, :-1].transpose(1, 2).float(), toks[:, 1:], reduction="none")
         out += ce.mean(1).tolist()
     return out
@@ -297,15 +310,25 @@ def main() -> None:
     ap.add_argument("--device", default=default_device())
     ap.add_argument("--n-passages", type=int, default=CFG.n_passages)
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--model", default=CFG.model_name, help="Pythia size, e.g. pythia-410m (PREREG-2 D)")
+    ap.add_argument("--mamba", default=None, help="HF repo of a Mamba model (PREREG-2 C), e.g. state-spaces/mamba-130m-hf")
+    ap.add_argument("--calib-chunk", type=int, default=None, help="max rows per calibration forward (memory)")
     args = ap.parse_args()
     set_determinism(CFG.master_seed)
-    v = Variant(args.step, args.shuffle_seed)
+    if args.mamba:
+        from rgc.mamba import MambaRunner
+        tag = args.mamba.split("/")[-1] + ("" if args.shuffle_seed is None else f"-shuffled{args.shuffle_seed}")
+        v = type("V", (), {"label": tag})()
+        loader = lambda: MambaRunner(args.mamba, device=args.device, shuffle_seed=args.shuffle_seed)
+    else:
+        v = Variant(args.step, args.shuffle_seed, args.model)
+        loader = lambda: load(v, device=args.device)
     name = v.label.replace("@", "_") + ("" if args.manip == "none" else f"__{args.manip}")
     out_dir = REPO / "results" / "m2" / name
     out_dir.mkdir(parents=True, exist_ok=True)
     raw = REPO / "results" / "raw"
     raw.mkdir(parents=True, exist_ok=True)
-    model = load(v, device=args.device)
+    model = loader()
     hooks = manipulation_hooks(args.manip, model.cfg.n_layers)
     dirs = list(unit_directions(model.cfg.d_model, CFG.n_dirs, CFG.dir_seed))
     passages = load_passages()[: args.n_passages]
@@ -314,14 +337,20 @@ def main() -> None:
 
     if "calib" in phases:
         t0 = time.time()
-        model64 = load(v, device=args.device).to(torch.float64)
-        model64.cfg.dtype = torch.float64
+        if args.mamba:
+            model64 = loader().to_float64()
+            fwd = lambda m, x: m.logits(x)
+        else:
+            model64 = load(v, device=args.device).to(torch.float64)
+            model64.cfg.dtype = torch.float64
+            fwd = lambda m, x: m(x)
         probe = torch.tensor([model.tokenizer.bos_token_id] + passages[0][:64])[None].to(args.device)
         with torch.no_grad():
-            l32, l64 = model(probe).double(), model64(probe)
+            l32, l64 = fwd(model, probe).double(), fwd(model64, probe)
         f64_check = float(((l32 - l64).abs().max() / l64.abs().max()).item())
         assert l64.dtype == torch.float64 and f64_check < 1e-4, f64_check
-        cal = calibrate(model, model64, hooks, passages[: CFG.n_calib_passages], dirs[: CFG.n_calib_dirs])
+        cal = calibrate(model, model64, hooks, passages[: CFG.n_calib_passages], dirs[: CFG.n_calib_dirs],
+                        chunk=args.calib_chunk)
         cal["f32_vs_f64_logit_rel_maxdiff"] = f64_check
         del model64
         (out_dir / "calib.json").write_text(json.dumps({**meta, **cal, "seconds": time.time() - t0}, indent=1))
@@ -331,7 +360,16 @@ def main() -> None:
         t0 = time.time()
         lat = main_grid(model, hooks, passages, dirs, eps)
         np.savez_compressed(raw / f"m2_{name}.npz", **{f"k{k}": v for k, v in lat.items()})
-        res = analyse_main(lat, model.cfg.n_layers, args.workers)
+        if args.mamba:  # PREREG-2 C: primary = depth stride 2 (even k, every second slice); secondary = full
+            from rgc.config_prereg2 import CFG2
+            st = CFG2.mamba_depth_stride
+            sub = {k // st: lat[k][..., ::st, :] for k in lat if k % st == 0}
+            res = analyse_main(sub, model.cfg.n_layers // st, args.workers)
+            res["full_resolution"] = {k2: v2 for k2, v2 in analyse_main(lat, model.cfg.n_layers, args.workers).items()
+                                      if k2 in ("pci_primary", "pci_by_theta", "pci_auc_logtheta", "z")}
+            res["depth_stride"] = st
+        else:
+            res = analyse_main(lat, model.cfg.n_layers, args.workers)
         ce = next_token_ce(model, hooks, passages)
         res.update({"ce_mean": float(np.mean(ce)), "ce_per_passage": ce})
         (out_dir / "main.json").write_text(json.dumps({**meta, "eps_star": eps, **res, "seconds": time.time() - t0}, indent=1))

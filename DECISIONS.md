@@ -131,3 +131,16 @@ An append-only log of every choice that departs from, or fills a gap in, the app
   - Because outputs are identical integers, runs made with either implementation are interchangeable. The intact Stage 3 run (in progress) uses the reference implementation; later runs use the fast one.
 - **Mamba runner (`rgc/mamba.py`, PREREG-2 part C):** HF `MambaForCausalLM` on the pure-torch path (neither the `kernels` nor the `mamba_ssm` package is installed). Perturbation and reading use forward pre-hooks.
   - Stage-0-style checks on mamba-130m (CPU) pass: bitwise reproducible, ε=0 gives exactly zero, q<p gives exactly zero, and the injected site equals ε to 1e-3. Shuffled copies are exact per-tensor permutations.
+
+## D18 — 2026-10-05 — Mamba float64 reference: three hidden float32 casts removed (no indicator values seen)
+- **Symptom:** an engineering pilot (passage 0 only; calibration curves only, no PCI) showed a 40–60% "plateau" between Mamba-130M's float32 gains and its float64 finite-difference reference. Clean states agreed to 2e-6, and float32 and float64 gains agreed for ε ≥ 1e-4. The fault was therefore in the reference: the float64 model at ε = 1e-8 disagreed with itself at ε = 1e-6.
+- **Cause:** HF's Mamba silently computes parts of a float64 model in float32:
+  - `residual_in_fp32` casts the residual stream to float32;
+  - `MambaRMSNorm` normalises in float32;
+  - the torch selective scan casts B and its input with `.float()`.
+
+  Each puts a float32 noise floor of about 0.06 gain units on a reference taken at ε = 1e-6.
+- **Fix:** in the float64 *reference copy only*, residuals stay float64 and RMSNorm keeps its input dtype. The scan's two `.float()` casts become `.to(input_dtype)` module-wide; this is bitwise identical for float32, as a test verifies against the original function. Casts on float32-valued *parameters* (A_log, D, biases) are exact and left alone.
+- **After the fix:** the float64 copy is linear to 1e-6 between ε = 1e-8 and 1e-6 (test), and float32 vs float64 agree to 0.6% at ε = 1e-2.
+- **Pythia/TransformerLens check:** the same self-consistency test on Pythia-160M shows its float64 reference is genuinely float64 (ε = 1e-8 vs 1e-6 agree to 4e-5), so the Stage 3 calibration is unaffected.
+- **Observation, unchanged rule:** Pythia's float32 noise floor is high at small ε, because late-layer residual norms are hundreds of times the injection-site norm. Its usable linear window sits near ε ≈ 1e-2–1e-1, with float32 noise and nonlinearity each about 3–4%, which is within the pre-registered 5% tolerance.
