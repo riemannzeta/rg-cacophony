@@ -99,3 +99,20 @@ def test_mean_ablation_hook_leaves_bos(tiny):
     assert torch.all(z[:, 1:, [0, 2]] == 7.0)
     assert not torch.all(z[:, 0, [0, 2]] == 7.0)  # BOS untouched
     assert not torch.all(z[:, 1:, 1] == 7.0)  # other heads untouched
+
+
+def test_s2b_posthoc_runs_and_reproduces_preregistered_effect(tiny, tmp_path):
+    import importlib.util
+
+    def mod(path, name):
+        spec = importlib.util.spec_from_file_location(name, path)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        return m
+
+    s2, s2b = mod("scripts/s2_m1.py", "s2"), mod("scripts/s2b_m1_posthoc.py", "s2b")
+    d = tmp_path / "m1"
+    s2.run(tiny, "tiny", n_boot=20, n_null=3, batch_size=256, out_dir=d, raw_dir=tmp_path / "raw")
+    out = s2b.run(tiny, d, n_null=3)  # asserts the final-slice effect reproduces exactly
+    assert "POST HOC" in out["label"]
+    assert set(out["entropy_detrended"]) >= {"H", "H_nobos"}
