@@ -1,6 +1,6 @@
 # PREDICTIONS.md — pre-registration
 
-**Status:** DRAFT, awaiting sign-off. It will be committed before any model comparison is run.
+**Status:** SIGNED OFF by the user on 2026-10-05 and committed before any real-model measurement. The only earlier runs were instrument sanity checks (Stage 0) and smoke tests on a tiny random transformer.
 
 **Frozen inputs:**
 - Stimuli at commit `ab041f6`: `stimuli/ambiguous.json` and `stimuli/wikitext_manifest.json` (sha256_all `57149fb6…`).
@@ -132,7 +132,7 @@
   - Directions: (i) the 8 random directions; (ii) the M1 sense direction at slice k, mean-removed and normalised.
   - Positions read: the continuation, q > target_pos (28–29 tokens).
 - **Metrics:** PCI over the window, and mean S over the window, at θ_primary. Contrast: after − before, with a bootstrap over prompt pairs and directions.
-- **Prediction:** **[USER TO FILL: direction of after − before for PCI and for spread, or "exploratory"]**. If left blank, the gating test is labelled *exploratory* and no claim is scored.
+- **Prediction:** none. The user chose **exploratory** on 2026-10-05. The after − before contrasts are reported with CIs, but no directional claim is scored.
 
 ---
 
