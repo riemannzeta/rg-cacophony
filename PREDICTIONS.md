@@ -29,6 +29,7 @@
 - **Order parameter (primary):** Δd′(L) = d′_target(L) − d′_ctrl(L), averaged over the 10 words.
 - **Secondary:** raw d′_target(L), d′_ctrl(L), and per-word curves.
 - **CIs:** within each word, resample train pairs (20) and test pairs (10) with replacement, refit the directions, and recompute. 10,000 resamples; 95% percentile intervals. Resampling is by minimal pair, so both senses of a frame stay together.
+- **Peak:** L_peak = argmax_L of the pooled point estimate of Δd′. "Peak Δd′" is Δd′(L_peak), and its CI is the bootstrap CI *at that fixed slice*. This avoids the upward bias of taking a maximum over bootstrap replicates.
 - **Breaking block:**
   - J(L) = Δd′(L+1) − Δd′(L) for blocks L = 0…11, from the pooled curve.
   - L* = argmax J.
@@ -48,6 +49,7 @@
   - The replacement applies at positions ≥ 1; BOS is left intact.
   - Then **refit** the directions on ablated train and evaluate on ablated test, for both target and control prompts.
   - Effect E = 1 − Δd′_abl(12) / Δd′(12).
+  - E is unstable when Δd′(12) is near 0, which is expected for controls. Every null comparison is therefore by rank: the percentile of E within that model's own null distribution.
 - **Nulls:**
   - 200 random 6-head sets drawn uniformly from 144 heads;
   - 200 layer-matched random sets: the same multiset of layers as the selected heads, with random heads within those layers, excluding the selected heads.
