@@ -92,7 +92,7 @@ def test_mamba_backend_through_s3(s3):
     from rgc.mamba import MambaRunner
 
     torch.manual_seed(0)
-    cfg = MambaConfig(vocab_size=50280, hidden_size=16, state_size=4, num_hidden_layers=4, expand=2, conv_kernel=4)
+    cfg = MambaConfig(vocab_size=50280, hidden_size=16, state_size=4, num_hidden_layers=8, expand=2, conv_kernel=4)
     hf = MambaForCausalLM(cfg)
     tok = AutoTokenizer.from_pretrained("EleutherAI/pythia-160m", revision="step143000")
     m = MambaRunner(model=hf, tokenizer=tok)
@@ -102,10 +102,11 @@ def test_mamba_backend_through_s3(s3):
     cal = s3.calibrate(m, m64, [], passages, dirs[:1], chunk=20)
     assert cal["eps_star"] is not None
     lat = s3.main_grid(m, [], passages, dirs, cal["eps_star"])
-    assert lat[0].shape[3] == 5  # slices 0..4
+    assert lat[0].shape[3] == 9  # slices 0..8
     sub = {k // 2: lat[k][..., ::2, :] for k in lat if k % 2 == 0}
-    assert sub[0].shape[3] == 3 and sub[1].shape[3] == 2  # slices {0,2,4} and {2,4}
-    res = s3.analyse_main(sub, 2, workers=1)
+    assert sub[0].shape[3] == 5 and sub[1].shape[3] == 4  # slices {0,2,4,6,8} and {2,4,6,8}
+    res = s3.analyse_main(sub, 4, workers=1)
+    assert len(res["z"]["boot_z"]) == 10_000
     assert "pci_primary" in res
     ce = s3.next_token_ce(m, [], passages)
     assert np.isfinite(ce).all()

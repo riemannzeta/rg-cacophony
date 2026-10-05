@@ -189,6 +189,7 @@ def analyse_main(lat: dict, nL: int, workers: int) -> dict:
     z_summary = {
         "pooled_z": prim["pooled_fit"].get("z"), "pooled_z_ci": [float(zlo), float(zhi)],
         "boot_z_finite_frac": float(np.isfinite(boot_z).mean()),
+        "boot_z": [float(x) if np.isfinite(x) else None for x in boot_z],  # same resample draws for every model
         "fittable_with_b_pos_frac": float(len(z_ok) / N),
         "cv_z": float(z_ok.std(ddof=1) / z_ok.mean()) if len(z_ok) > 1 else None,
         "median_r2_power": float(np.median(r2)) if r2 else None,

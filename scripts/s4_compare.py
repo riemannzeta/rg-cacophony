@@ -161,6 +161,34 @@ def main() -> None:
                 b4[c] = {"B1_null": ok1, "B2_null": ok2, "pass": ok1 and ok2}
         B["B4"] = b4 or "pending"
 
+    # ---- PREREG-2 C and D (exploratory: reported with paired CIs, not scored) -------------------
+    C = card["PREREG-2"]["C_exploratory"] = {}
+    for mamba_repo, pythia in CFG2.mamba_pairs:
+        mk, pk = mamba_repo.split("/")[-1], f"{pythia}_step{CFG.final_step}"
+        if mk in m2 and pk in m2:
+            C[f"{mk} - {pythia}"] = paired_boot(np.array(m2[mk]["per_passage_dir_pci_primary"]),
+                                                np.array(m2[pk]["per_passage_dir_pci_primary"]))
+    mk = CFG2.mamba_pairs[0][0].split("/")[-1]
+    for sd in CFG2.mamba_shuffle_seeds:
+        if mk in m2 and f"{mk}-shuffled{sd}" in m2:
+            C[f"{mk} - shuffled{sd}"] = paired_boot(np.array(m2[mk]["per_passage_dir_pci_primary"]),
+                                                    np.array(m2[f"{mk}-shuffled{sd}"]["per_passage_dir_pci_primary"]))
+    D = card["PREREG-2"]["D_exploratory"] = {}
+    zs = {m: m2.get(f"{m}_step{CFG.final_step}") for m in CFG2.scale_models}
+    for m, mm in zs.items():
+        if mm:
+            D[m] = {"z": mm["z"]["pooled_z"], "ci": mm["z"]["pooled_z_ci"], "cv": mm["z"]["cv_z"],
+                    "median_r2": mm["z"]["median_r2_power"]}
+    names = [m for m, mm in zs.items() if mm and "boot_z" in mm["z"]]
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            a = np.array([np.nan if v is None else v for v in zs[names[i]]["z"]["boot_z"]], float)
+            b = np.array([np.nan if v is None else v for v in zs[names[j]]["z"]["boot_z"]], float)
+            d = (a - b)[np.isfinite(a - b)]
+            if d.size:
+                lo, hi = ci(d)
+                D[f"z {names[i]} - {names[j]}"] = {"ci": [float(lo), float(hi)], "n_finite": int(d.size)}
+
     (R / "scorecard.json").write_text(json.dumps(card, indent=1, default=float))
     lines = ["# Scorecard (mechanical; see scripts/s4_compare.py)", ""]
     def emit(name, d):
