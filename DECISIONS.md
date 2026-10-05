@@ -144,3 +144,8 @@ An append-only log of every choice that departs from, or fills a gap in, the app
 - **After the fix:** the float64 copy is linear to 1e-6 between ε = 1e-8 and 1e-6 (test), and float32 vs float64 agree to 0.6% at ε = 1e-2.
 - **Pythia/TransformerLens check:** the same self-consistency test on Pythia-160M shows its float64 reference is genuinely float64 (ε = 1e-8 vs 1e-6 agree to 4e-5), so the Stage 3 calibration is unaffected.
 - **Observation, unchanged rule:** Pythia's float32 noise floor is high at small ε, because late-layer residual norms are hundreds of times the injection-site norm. Its usable linear window sits near ε ≈ 1e-2–1e-1, with float32 noise and nonlinearity each about 3–4%, which is within the pre-registered 5% tolerance.
+
+## D19 — 2026-10-05 — Gating test boundary (exploratory test; integrity seen, results not inspected)
+- **Clipping:** the trained model's L* = 0 (block 0), so k_before = L* − 2 = −2 is clipped to slice 0, as the pre-registered boundary rule provides. k_after = 1. Both windows keep 3 downstream slices.
+- **Sense direction:** it is undefined at slice 0, because every prompt of a word has the identical embedding there. The "before" condition therefore uses only the 8 random directions. The "after" condition uses random directions and the sense direction.
+- The headline contrast (after − before) uses random directions only, as pre-registered.
