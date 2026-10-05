@@ -35,7 +35,7 @@ case "${1:-status}" in
   ssh) shift; ssh "${SSH_OPTS[@]}" "ubuntu@$(ip)" "$@" ;;
   push)
     git -C "$REPO" push -q gpu main
-    ssh "${SSH_OPTS[@]}" "ubuntu@$(ip)" 'cd ~/rg-cacophony && git pull -q --ff-only origin main && git log --oneline -1' ;;
+    ssh "${SSH_OPTS[@]}" "ubuntu@$(ip)" 'cd ~/rg-cacophony && git fetch -q origin main && git reset -q --hard origin/main && git log --oneline -1' ;;
   pull)  # bring results back (summaries + figures; raw arrays stay remote unless asked)
     rsync -az -e "ssh ${SSH_OPTS[*]}" --exclude raw/ "ubuntu@$(ip):rg-cacophony/results/" "$REPO/results/" ;;
   *) echo "usage: $0 start|stop|status|ip|ssh|push|pull" >&2; exit 2 ;;
