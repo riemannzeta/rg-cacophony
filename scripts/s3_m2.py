@@ -56,14 +56,14 @@ def respond(model, tokens, k, P, U, E, extra_hooks=None, chunk: int | None = Non
 # calibration
 # ---------------------------------------------------------------------------------------------
 
-def calibrate(model, model64, hooks, passages, dirs, chunk=None) -> dict:
+def calibrate(model, model64, hooks, passages, dirs, chunk=None, k_stride: int = 1) -> dict:
     nL, eps_grid = model.cfg.n_layers, np.array(CFG.eps_grid)
     devs = {e: [] for e in range(len(eps_grid))}
     agree = {e: [0, 0] for e in range(len(eps_grid))}
     bos = model.tokenizer.bos_token_id
     for ids in passages:
         tokens = seq(ids, bos)
-        for k in range(nL):
+        for k in range(0, nL, k_stride):
             P, U, E = [], [], []
             for p in CFG.p_grid:
                 for u in dirs:
@@ -98,12 +98,12 @@ def calibrate(model, model64, hooks, passages, dirs, chunk=None) -> dict:
 # main grid
 # ---------------------------------------------------------------------------------------------
 
-def main_grid(model, hooks, passages, dirs, eps: float) -> dict:
+def main_grid(model, hooks, passages, dirs, eps: float, k_stride: int = 1) -> dict:
     nL, bos = model.cfg.n_layers, model.tokenizer.bos_token_id
-    lattices = {k: [] for k in range(nL)}  # k -> [n, p, d, S_k, T]
+    lattices = {k: [] for k in range(0, nL, k_stride)}  # k -> [n, p, d, S_k, T]
     for ids in passages:
         tokens = seq(ids, bos)
-        for k in range(nL):
+        for k in range(0, nL, k_stride):
             P = torch.tensor([p for p in CFG.p_grid for _ in dirs])
             U = torch.stack([u for _ in CFG.p_grid for u in dirs])
             E = torch.full((len(P),), eps, dtype=torch.float32)
@@ -314,6 +314,7 @@ def main() -> None:
     ap.add_argument("--model", default=CFG.model_name, help="Pythia size, e.g. pythia-410m (PREREG-2 D)")
     ap.add_argument("--mamba", default=None, help="HF repo of a Mamba model (PREREG-2 C), e.g. state-spaces/mamba-130m-hf")
     ap.add_argument("--calib-chunk", type=int, default=None, help="max rows per calibration forward (memory)")
+    ap.add_argument("--k-stride", type=int, default=1, help="inject only at every k_stride-th layer (Mamba primary)")
     args = ap.parse_args()
     set_determinism(CFG.master_seed)
     if args.mamba:
@@ -351,7 +352,8 @@ def main() -> None:
         f64_check = float(((l32 - l64).abs().max() / l64.abs().max()).item())
         assert l64.dtype == torch.float64 and f64_check < 1e-4, f64_check
         cal = calibrate(model, model64, hooks, passages[: CFG.n_calib_passages], dirs[: CFG.n_calib_dirs],
-                        chunk=args.calib_chunk)
+                        chunk=args.calib_chunk, k_stride=args.k_stride)
+        cal["k_stride"] = args.k_stride
         cal["f32_vs_f64_logit_rel_maxdiff"] = f64_check
         del model64
         (out_dir / "calib.json").write_text(json.dumps({**meta, **cal, "seconds": time.time() - t0}, indent=1))
@@ -359,15 +361,18 @@ def main() -> None:
     eps = json.loads((out_dir / "calib.json").read_text())["eps_star"]
     if "main" in phases:
         t0 = time.time()
-        lat = main_grid(model, hooks, passages, dirs, eps)
+        lat = main_grid(model, hooks, passages, dirs, eps, k_stride=args.k_stride)
         np.savez_compressed(raw / f"m2_{name}.npz", **{f"k{k}": v for k, v in lat.items()})
         if args.mamba:  # PREREG-2 C: primary = depth stride 2 (even k, every second slice); secondary = full
             from rgc.config_prereg2 import CFG2
             st = CFG2.mamba_depth_stride
             sub = {k // st: lat[k][..., ::st, :] for k in lat if k % st == 0}
             res = analyse_main(sub, model.cfg.n_layers // st, args.workers)
-            res["full_resolution"] = {k2: v2 for k2, v2 in analyse_main(lat, model.cfg.n_layers, args.workers).items()
-                                      if k2 in ("pci_primary", "pci_by_theta", "pci_auc_logtheta", "z")}
+            if len(lat) == model.cfg.n_layers:  # full-resolution secondary needs injections at every layer
+                res["full_resolution"] = {k2: v2 for k2, v2 in analyse_main(lat, model.cfg.n_layers, args.workers).items()
+                                          if k2 in ("pci_primary", "pci_by_theta", "pci_auc_logtheta", "z")}
+            else:
+                res["full_resolution"] = "skipped: injections only at k_stride=%d layers" % args.k_stride
             res["depth_stride"] = st
         else:
             res = analyse_main(lat, model.cfg.n_layers, args.workers)
