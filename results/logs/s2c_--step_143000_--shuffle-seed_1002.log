@@ -1,0 +1,7 @@
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 3859.66it/s]
+Loaded pretrained model pythia-160m into HookedTransformer
+/home/ubuntu/rg-cacophony/scripts/s2c_conflict.py:113: RuntimeWarning: Mean of empty slice
+  return np.nanmean(r["point"][k], 0), np.nanmean(r["boot"][k], 1)  # [S], [B, S]
+/home/ubuntu/rg-cacophony/scripts/s2c_conflict.py:130: RuntimeWarning: Mean of empty slice
+  b_diff = np.nanmean(res["target"]["boot"][k], 1) - np.nanmean(res["control"]["boot"][k], 1)
+done pythia-160m@step143000-shuffled1002 -> /home/ubuntu/rg-cacophony/results/conflict/pythia-160m_step143000-shuffled1002/summary.json

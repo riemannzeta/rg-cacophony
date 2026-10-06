@@ -159,3 +159,11 @@ An append-only log of every choice that departs from, or fills a gap in, the app
   - The PREREG-2 C **secondary** full-resolution analysis is therefore not run.
   - Calibration batches are chunked (24 rows for 130M, 12 for 370M) for memory; each chunk keeps its own row-matched clean baseline.
 - **Status:** all of part C is exploratory (the user made no prediction), and nothing about it has been measured.
+
+## D21 — 2026-10-06 — Notes from scoring (c) and PREREG-2 B (after results were seen; nothing re-scored)
+- **θ fallback (pre-registered, mechanical):** the pooled degenerate fraction at θ = 0.1 over the 7 Pythia-160M variants is 0.765, below 0.9, so θ_primary stays 0.1. PREDICTIONS (c) and PREREG-2 A therefore stand as scored at θ = 0.1.
+- **Determinism:** the Stage 4 re-run of the trained model's main phase reproduces run 1's PCI matrix and PCI-by-θ bitwise, even though run 1 used the reference LZ76 and the re-run the fast one.
+- **B instability:**
+  - The B1/B2 CIs are very wide (B1 diff 0.51, CI −2.6 to 3.0) because at slices 2–4 two words (seal, bark) have per-word raw separation m_AA − m_BB ≈ 0. Their t values explode (seal R = 5.0 at slice 4) and dominate the pooled mean.
+  - The pre-registered implementation checked the *pooled* separation's CI rather than each word's, which did not guard against this. That is a flaw in my implementation of the pre-registration.
+  - The pre-registered verdicts stand: B1 FAIL, B2 FAIL (uninformative rather than contrary). Any per-word-guarded re-analysis is exploratory only.
