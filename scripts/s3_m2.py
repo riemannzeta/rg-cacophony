@@ -52,6 +52,23 @@ def respond(model, tokens, k, P, U, E, extra_hooks=None, chunk: int | None = Non
                       for i in range(0, len(P), chunk)])
 
 
+def f64_probe(model, model64, probe, fwd) -> float:
+    """Check the float64 reference model: parameters really float64, outputs agree with float32.
+
+    Checks the PARAMETER dtype, not the logits dtype: HF Mamba casts its final logits to float32
+    even when all internal computation is float64 (the Stage 4 Mamba runs failed on a logits-dtype
+    check, D22)."""
+    from rgc.mamba import MambaRunner
+
+    params = model64.model.parameters() if isinstance(model64, MambaRunner) else model64.parameters()
+    assert next(params).dtype == torch.float64, "reference model is not float64"
+    with torch.no_grad():
+        l32, l64 = fwd(model, probe).double(), fwd(model64, probe).double()
+    rel = float(((l32 - l64).abs().max() / l64.abs().max()).item())
+    assert rel < 1e-4, rel
+    return rel
+
+
 # ---------------------------------------------------------------------------------------------
 # calibration
 # ---------------------------------------------------------------------------------------------
@@ -366,10 +383,7 @@ def main() -> None:
             model64.cfg.dtype = torch.float64
             fwd = lambda m, x: m(x)
         probe = torch.tensor([model.tokenizer.bos_token_id] + passages[0][:64])[None].to(args.device)
-        with torch.no_grad():
-            l32, l64 = fwd(model, probe).double(), fwd(model64, probe)
-        f64_check = float(((l32 - l64).abs().max() / l64.abs().max()).item())
-        assert l64.dtype == torch.float64 and f64_check < 1e-4, f64_check
+        f64_check = f64_probe(model, model64, probe, fwd)
         cal = calibrate(model, model64, hooks, passages[: CFG.n_calib_passages], dirs[: CFG.n_calib_dirs],
                         chunk=args.calib_chunk, k_stride=args.k_stride)
         cal["k_stride"] = args.k_stride

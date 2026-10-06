@@ -122,3 +122,34 @@ def test_prereg3_outputs(tiny, s3):
     assert np.array(res["per_passage_dir_seff"]).shape == (2, 2)
     res0 = s3.analyse_main(lat, 3, workers=1)  # without dm: pre-registered outputs unchanged
     assert res0["per_passage_dir_pci_primary"] == res["per_passage_dir_pci_primary"]
+
+
+def test_f64_probe_accepts_mamba_float32_logits_and_rejects_f32_reference(s3):
+    import copy
+
+    from transformers import AutoTokenizer, MambaConfig, MambaForCausalLM
+
+    from rgc.mamba import MambaRunner
+
+    torch.manual_seed(0)
+    cfg = MambaConfig(vocab_size=50280, hidden_size=16, state_size=4, num_hidden_layers=2, expand=2, conv_kernel=4)
+    hf = MambaForCausalLM(cfg)
+    tok = AutoTokenizer.from_pretrained("EleutherAI/pythia-160m", revision="step143000")
+    m = MambaRunner(model=hf, tokenizer=tok)
+    m64 = MambaRunner(model=copy.deepcopy(hf), tokenizer=tok).to_float64()
+    probe = torch.tensor([[0] + load_passages()[0][:32]])
+    fwd = lambda mm, x: mm.logits(x)
+    assert s3.f64_probe(m, m64, probe, fwd) < 1e-4  # HF returns float32 logits; must still pass
+    with pytest.raises(AssertionError):
+        s3.f64_probe(m, MambaRunner(model=copy.deepcopy(hf), tokenizer=tok), probe, fwd)  # f32 "reference"
+
+
+def test_f64_probe_transformerlens(tiny, s3):
+    import copy
+
+    t64 = HookedTransformer(copy.deepcopy(tiny.cfg), tokenizer=tiny.tokenizer, default_padding_side="right")
+    t64.load_state_dict(tiny.state_dict())
+    t64 = t64.to(torch.float64)
+    t64.cfg.dtype = torch.float64
+    probe = torch.tensor([[0] + load_passages()[0][:32]])
+    assert s3.f64_probe(tiny, t64, probe, lambda mm, x: mm(x)) < 1e-4

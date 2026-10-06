@@ -167,3 +167,9 @@ An append-only log of every choice that departs from, or fills a gap in, the app
   - The B1/B2 CIs are very wide (B1 diff 0.51, CI −2.6 to 3.0) because at slices 2–4 two words (seal, bark) have per-word raw separation m_AA − m_BB ≈ 0. Their t values explode (seal R = 5.0 at slice 4) and dominate the pooled mean.
   - The pre-registered implementation checked the *pooled* separation's CI rather than each word's, which did not guard against this. That is a flaw in my implementation of the pre-registration.
   - The pre-registered verdicts stand: B1 FAIL, B2 FAIL (uninformative rather than contrary). Any per-word-guarded re-analysis is exploratory only.
+
+## D22 — 2026-10-06 — Stage 4 Mamba runs failed on a guard; re-run approved compute (no C data existed)
+- **What failed:** all Mamba runs (part C) stopped before calibrating. My float64 sanity guard required float64 *logits*, but HF Mamba casts its final logits to float32 even when every internal computation is float64. The measured float32 vs float64 agreement was fine (3e-6 to 2e-5).
+- **Fix:** `f64_probe()` now checks the reference model's *parameter* dtype plus output agreement. It is unit-tested for Mamba (float32 logits accepted; a float32 "reference" rejected) and for TransformerLens.
+- **Re-run:** the Mamba part of the approved Stage 4 compute is re-run unchanged.
+- **Idle box:** after the queue ended at 00:39 UTC the box sat idle for about 16 h (about $16), because nothing stopped it. From now on every queue ends with an automatic instance stop.
