@@ -1,5 +1,7 @@
 # Scorecard (mechanical; see scripts/s4_compare.py)
 
+- c / c1 (trained > step 0 and > each shuffle): pass
+- c / c2 (early checkpoints in between): pass
 - a / a1: pass
 - a / a2-i: fail
 - a / a2-ii: pass
@@ -7,6 +9,7 @@
 - a / a3: fail
 - **PREDICTIONS (a)**: FAIL
 - **PREDICTIONS (b)**: PASS
+- **PREDICTIONS (c)**: PASS
 - **PREDICTIONS (d)**: FAIL
 - **PREREG-2 A1**: FAIL
 - **PREREG-2 A2**: FAIL
@@ -14,6 +17,9 @@
 - **PREREG-2 A4**: PASS
 - **PREREG-2 B1**: FAIL
 - **PREREG-2 B2**: FAIL
+- **PREREG-2 B4**: PASS
+- PREREG-2 C: exploratory (no prediction); see scorecard.json
+- PREREG-2 D: exploratory; not testable because (d) failed (z undefined)
 - **PREREG-3 R1**: PASS
 - **PREREG-3 R2**: PASS
 - **PREREG-3 R3**: PASS

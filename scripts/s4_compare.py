@@ -227,6 +227,10 @@ def main() -> None:
     def emit(name, d):
         if isinstance(d, dict) and "pass" in d:
             lines.append(f"- **{name}**: {'PASS' if d['pass'] else 'FAIL'}")
+    if isinstance(P.get("c"), dict) and "c1_pass" in P["c"]:
+        lines.append(f"- c / c1 (trained > step 0 and > each shuffle): {'pass' if P['c']['c1_pass'] else 'fail'}")
+        lines.append(f"- c / c2 (early checkpoints in between): {'pass' if P['c']['c2_pass'] else 'fail'}")
+        P["c"]["pass"] = P["c"]["c1_pass"] and P["c"]["c2_pass"]
     for k, v in P.items():
         if k == "a":
             for sub in ("a1", "a2-i", "a2-ii", "a2-iii", "a3"):
@@ -235,6 +239,13 @@ def main() -> None:
     for part in ("A", "B"):
         for k, v in card["PREREG-2"][part].items():
             emit(f"PREREG-2 {k}", v)
+    b4 = card["PREREG-2"]["B"].get("B4")
+    if isinstance(b4, dict) and b4:
+        lines.append(f"- **PREREG-2 B4**: {'PASS' if all(v['pass'] for v in b4.values()) else 'FAIL'}")
+    if card["PREREG-2"].get("C_exploratory"):
+        lines.append("- PREREG-2 C: exploratory (no prediction); see scorecard.json")
+    if card["PREREG-2"].get("D_exploratory"):
+        lines.append("- PREREG-2 D: exploratory; not testable because (d) failed (z undefined)")
     for k, v in card["PREREG-3"].items():
         emit(f"PREREG-3 {k}", v)
     (R / "SCORECARD.md").write_text("\n".join(lines) + "\n")
