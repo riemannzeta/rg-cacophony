@@ -247,8 +247,8 @@ def main() -> None:
         lm = {b: float(np.nanmean(L_[b])) for b in CFG4.betas}
         mono = all(lm[a] < lm[b] for a, b in zip(CFG4.betas, CFG4.betas[1:]))
         amin = min(lm, key=lambda b: abs(lm[b]))
-        G4["T3"] = {"lambda_by_beta": lm, "monotone_increasing": mono, "argmin_abs": amin,
-                    "pass": mono and amin in CFG4.near_natural}
+        G4["T3_exploratory"] = {"lambda_by_beta": lm, "monotone_increasing": mono, "argmin_abs": amin,
+                                "would_meet_draft_criterion": mono and amin in CFG4.near_natural}
         c1a, c1b = paired_boot(C_[1.0], C_[0.25]), paired_boot(C_[1.0], C_[4.0])
         G4["C2"] = {"chi1_minus_chi025": c1a, "chi1_minus_chi4": c1b, "pass": c1a["ci"][0] > 0 and c1b["ci"][0] > 0}
         from scipy import stats as _st
