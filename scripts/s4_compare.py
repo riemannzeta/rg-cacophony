@@ -13,6 +13,7 @@ import numpy as np
 from rgc.config import CFG
 from rgc.config_prereg2 import CFG2
 from rgc.config_prereg3 import CFG3
+from rgc.config_prereg4 import CFG4
 from rgc.determinism import REPO, env_info
 from rgc.stats import ci
 
@@ -222,6 +223,59 @@ def main() -> None:
     else:
         F["pending"] = [str(n) for n in names if not get(n)]
 
+    # ---- PREREG-4 (criticality and chimera states, second fresh set) ---------------------------
+    G4 = card["PREREG-4"] = {}
+    f2 = REPO / CFG4.out_root
+    m4 = {d.name: load(d / "main.json") for d in f2.iterdir() if (d / "main.json").exists()} if f2.exists() else {}
+    th4 = str(CFG4.theta)
+    cond4 = lambda base, b: m4.get(base if b == 1.0 else f"{base}__beta={b:g}")
+    tr4 = TRAINED
+    sh4 = f"{TRAINED}-shuffled1001"
+    sweep_ok = lambda base: all(cond4(base, b) for b in CFG4.betas)
+    pci4 = lambda m: np.array(m["per_passage_dir_pci_by_theta"][th4])
+    lam4 = lambda m: np.array(m["per_passage_dir_lambda"])
+    chi4 = lambda m: np.array(m["chimera"]["blocks16"]["chimera"])[:, None]
+    if sweep_ok(tr4):
+        P_ = {b: pci4(cond4(tr4, b)) for b in CFG4.betas}
+        L_ = {b: lam4(cond4(tr4, b)) for b in CFG4.betas}
+        C_ = {b: chi4(cond4(tr4, b)) for b in CFG4.betas}
+        d1, d2 = paired_boot(P_[1.0], P_[0.25]), paired_boot(P_[1.0], P_[4.0])
+        G4["T1"] = {"pci1_minus_pci025": d1, "pci1_minus_pci4": d2, "pass": d1["ci"][0] > 0 and d2["ci"][0] > 0}
+        means = {b: float(P_[b].mean()) for b in CFG4.betas}
+        G4["T2"] = {"pci_by_beta": means, "argmax": max(means, key=means.get),
+                    "pass": max(means, key=means.get) in CFG4.near_natural}
+        lm = {b: float(np.nanmean(L_[b])) for b in CFG4.betas}
+        mono = all(lm[a] < lm[b] for a, b in zip(CFG4.betas, CFG4.betas[1:]))
+        amin = min(lm, key=lambda b: abs(lm[b]))
+        G4["T3"] = {"lambda_by_beta": lm, "monotone_increasing": mono, "argmin_abs": amin,
+                    "pass": mono and amin in CFG4.near_natural}
+        c1a, c1b = paired_boot(C_[1.0], C_[0.25]), paired_boot(C_[1.0], C_[4.0])
+        G4["C2"] = {"chi1_minus_chi025": c1a, "chi1_minus_chi4": c1b, "pass": c1a["ci"][0] > 0 and c1b["ci"][0] > 0}
+        from scipy import stats as _st
+        G4["exploratory_spearman_pci_chi_over_beta"] = float(_st.spearmanr([means[b] for b in CFG4.betas],
+                                                                            [float(C_[b].mean()) for b in CFG4.betas])[0])
+        G4["exploratory_pci_dm_by_beta"] = {b: float(np.mean(cond4(tr4, b)["per_passage_dir_pci_dm"])) for b in CFG4.betas}
+        G4["exploratory_chi_by_beta"] = {b: float(C_[b].mean()) for b in CFG4.betas}
+    ctrl4 = [f"{CFG.model_name}_step0"] + [f"{TRAINED}-shuffled{sd}" for sd in CFG.shuffle_seeds]
+    if m4.get(tr4) and all(m4.get(c) for c in ctrl4):
+        absdiff = lambda a, b: abs(np.nanmean(a)) - abs(np.nanmean(b))
+        s1 = {c: paired_boot(np.nan_to_num(lam4(m4[c]), nan=np.nanmean(lam4(m4[c]))),
+                             np.nan_to_num(lam4(m4[tr4]), nan=np.nanmean(lam4(m4[tr4]))), fn=absdiff) for c in ctrl4}
+        G4["S1"] = {"abs_lambda_control_minus_trained": s1, "lambda": {c: float(np.nanmean(lam4(m4[c]))) for c in [tr4] + ctrl4},
+                    "pass": all(v["ci"][0] > 0 for v in s1.values())}
+        c1 = {c: paired_boot(chi4(m4[tr4]), chi4(m4[c])) for c in ctrl4}
+        G4["C1"] = {"chi_trained_minus_control": c1, "pass": all(v["ci"][0] > 0 for v in c1.values())}
+        lo, hi = CFG4.waist_middle
+        waist = lambda m: 1 + int(np.argmin(np.array(m["chimera"]["blocks16"]["eff_dim_mean"])[1:12]))
+        wt, w0 = waist(m4[tr4]), waist(m4[ctrl4[0]])
+        G4["C3"] = {"waist_trained": wt, "waist_step0": w0, "pass": lo <= wt <= hi and not (lo <= w0 <= hi)}
+    if sweep_ok(sh4):
+        sm = {b: float(pci4(cond4(sh4, b)).mean()) for b in CFG4.betas}
+        G4["S2"] = {"shuffled_pci_by_beta": sm, "argmax": max(sm, key=sm.get),
+                    "pass": max(sm, key=sm.get) not in CFG4.near_natural}
+    if not G4:
+        G4["pending"] = True
+
     (R / "scorecard.json").write_text(json.dumps(card, indent=1, default=float))
     lines = ["# Scorecard (mechanical; see scripts/s4_compare.py)", ""]
     def emit(name, d):
@@ -248,6 +302,8 @@ def main() -> None:
         lines.append("- PREREG-2 D: exploratory; not testable because (d) failed (z undefined)")
     for k, v in card["PREREG-3"].items():
         emit(f"PREREG-3 {k}", v)
+    for k, v in card["PREREG-4"].items():
+        emit(f"PREREG-4 {k}", v)
     (R / "SCORECARD.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
 

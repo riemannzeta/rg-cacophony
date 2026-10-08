@@ -222,7 +222,22 @@ def analyse_main(lat: dict, nL: int, workers: int, dm_frac: float | None = None)
     reach_by_theta_nd = P1[: kmax + 1].mean(axis=(0, 2))  # [N, nD, theta]
     seff_nd = np.mean([participation_spread(lat[k][:, ip], p).mean(-1)  # [N, nD] mean over slices
                        for k in range(kmax + 1) for ip, p in enumerate(CFG.p_grid)], axis=0)
+    # PREREG-4: perturbation growth exponent lambda = OLS slope over depth of 0.5*log(mean_{q>p} G^2)
+    lam = np.full((kmax + 1, nP, N, nD), np.nan)
+    for k in range(kmax + 1):
+        for ip, p in enumerate(CFG.p_grid):
+            E = (lat[k][:, ip][..., 1:, p + 1 :].astype(np.float64) ** 2).mean(-1)  # [N, nD, S_k-1]
+            t = np.arange(1, E.shape[-1] + 1, dtype=float)
+            for n in range(N):
+                for d in range(nD):
+                    ok = E[n, d] > 0
+                    if ok.sum() >= 3:
+                        lam[k, ip, n, d] = np.polyfit(t[ok], 0.5 * np.log(E[n, d][ok]), 1)[0]
+    lam_nd = np.nanmean(lam, axis=(0, 1))  # [N, nD]
     extra = {
+        "per_passage_dir_lambda": lam_nd.tolist(),
+        "lambda_mean": float(np.nanmean(lam_nd)),
+        "lambda_by_k": np.nanmean(lam, axis=(1, 2, 3)).tolist(),
         "per_passage_dir_reach_by_theta": {str(th): reach_by_theta_nd[:, :, j].tolist() for j, th in enumerate(thetas)},
         "per_passage_dir_seff": seff_nd.tolist(),
     }
@@ -247,6 +262,30 @@ def analyse_main(lat: dict, nL: int, workers: int, dm_frac: float | None = None)
         "spread": spread,
         "self_column_gain_k_p64": self_col,
     }
+
+
+def chimera_all(model, hooks, passages) -> dict:
+    """PREREG-4 part C: chimera / metastability / effective dimensionality for every passage."""
+    from rgc import chimera as ch
+
+    bos, out = model.tokenizer.bos_token_id, {"blocks16": [], "sentences": []}
+    for ids in passages:
+        toks = seq(ids, bos)
+        X = ch.normalised_residuals(model, toks, hooks)
+        strs = [model.tokenizer.decode([i]) for i in toks.tolist()]
+        out["blocks16"].append(ch.stats(X, ch.blocks(len(toks), 16)))
+        out["sentences"].append(ch.stats(X, ch.sentences(strs)))
+    summ = {}
+    for part, rows in out.items():
+        summ[part] = {
+            "chimera": [r["chimera"] for r in rows], "metastability": [r["metastability"] for r in rows],
+            "eff_dim": [r["eff_dim"] for r in rows], "global_sync": [r["global_sync"] for r in rows],
+            "R_mean": [r["R_mean"] for r in rows],
+            "chimera_mean": float(np.mean([r["chimera"] for r in rows])),
+            "metastability_mean": float(np.mean([r["metastability"] for r in rows])),
+            "eff_dim_mean": np.mean([r["eff_dim"] for r in rows], axis=0).tolist(),
+        }
+    return summ
 
 
 @torch.no_grad()
@@ -350,6 +389,7 @@ def main() -> None:
     ap.add_argument("--passages", default=None, help="passage manifest (default: stimuli/wikitext_manifest.json)")
     ap.add_argument("--out-root", default="results/m2", help="output root (PREREG-3: results/m2_fresh)")
     ap.add_argument("--dm-frac", type=float, default=None, help="density-matched PCI fraction (PREREG-3: 0.2)")
+    ap.add_argument("--chimera", action="store_true", help="PREREG-4: chimera/metastability/eff-dim per passage")
     args = ap.parse_args()
     set_determinism(CFG.master_seed)
     if args.mamba:
@@ -412,6 +452,8 @@ def main() -> None:
             res = analyse_main(lat, model.cfg.n_layers, args.workers, dm_frac=args.dm_frac)
         ce = next_token_ce(model, hooks, passages)
         res.update({"ce_mean": float(np.mean(ce)), "ce_per_passage": ce})
+        if args.chimera:
+            res["chimera"] = chimera_all(model, hooks, passages)
         (out_dir / "main.json").write_text(json.dumps({**meta, "eps_star": eps, **res, "seconds": time.time() - t0}, indent=1))
         print("main done")
     if "gating" in phases:

@@ -153,3 +153,28 @@ def test_f64_probe_transformerlens(tiny, s3):
     t64.cfg.dtype = torch.float64
     probe = torch.tensor([[0] + load_passages()[0][:32]])
     assert s3.f64_probe(tiny, t64, probe, lambda mm, x: mm(x)) < 1e-4
+
+
+def test_prereg4_lambda_and_chimera(tiny, s3):
+    passages = load_passages()[:2]
+    dirs = list(unit_directions(32, 2, 11))
+    lat = s3.main_grid(tiny, [], passages, dirs, 1e-3)
+    res = s3.analyse_main(lat, 3, workers=1)
+    assert np.array(res["per_passage_dir_lambda"]).shape == (2, 2) and np.isfinite(res["lambda_mean"])
+    ch = s3.chimera_all(tiny, manipulation_hooks("beta=2", 3), passages)
+    for part in ("blocks16", "sentences"):
+        assert len(ch[part]["chimera"]) == 2 and len(ch[part]["eff_dim_mean"]) == 4
+        assert all(c >= 0 for c in ch[part]["chimera"])
+
+
+def test_lambda_sign_on_synthetic_lattices(s3):
+    # growing perturbation -> lambda > 0; decaying -> lambda < 0 (exactly the per-layer log growth)
+    N, nP, nD, T = 1, 3, 1, 257
+    for rate in (0.3, -0.2):
+        lat = {}
+        for k in range(3):
+            S = 13 - k
+            g = np.exp(rate * np.arange(S))[:, None] * np.ones((S, T)) * 0.05
+            lat[k] = np.broadcast_to(g, (N, nP, nD, S, T)).copy()
+        res = s3.analyse_main(lat, 3, workers=1)
+        assert abs(res["lambda_mean"] - rate) < 1e-9
