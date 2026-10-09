@@ -390,6 +390,7 @@ def main() -> None:
     ap.add_argument("--out-root", default="results/m2", help="output root (PREREG-3: results/m2_fresh)")
     ap.add_argument("--dm-frac", type=float, default=None, help="density-matched PCI fraction (PREREG-3: 0.2)")
     ap.add_argument("--chimera", action="store_true", help="PREREG-4: chimera/metastability/eff-dim per passage")
+    ap.add_argument("--eps-override", type=float, default=None, help="POST HOC: use this eps instead of eps* (D23)")
     args = ap.parse_args()
     set_determinism(CFG.master_seed)
     if args.mamba:
@@ -431,7 +432,13 @@ def main() -> None:
         del model64
         (out_dir / "calib.json").write_text(json.dumps({**meta, **cal, "seconds": time.time() - t0}, indent=1))
         print(f"calib done eps*={cal['eps_star']}")
-    eps = json.loads((out_dir / "calib.json").read_text())["eps_star"]
+    if args.phase == "chimera":  # PREREG-4 C2 (D23): chimera index needs no eps
+        (out_dir / "chimera.json").write_text(json.dumps({**meta, "chimera": chimera_all(model, hooks, passages)}, indent=1))
+        print("chimera done")
+        return
+    eps = args.eps_override if args.eps_override is not None else json.loads((out_dir / "calib.json").read_text())["eps_star"]
+    if args.eps_override is not None:
+        meta["eps_override_post_hoc"] = args.eps_override
     if "main" in phases:
         t0 = time.time()
         lat = main_grid(model, hooks, passages, dirs, eps, k_stride=args.k_stride)

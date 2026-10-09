@@ -173,3 +173,11 @@ An append-only log of every choice that departs from, or fills a gap in, the app
 - **Fix:** `f64_probe()` now checks the reference model's *parameter* dtype plus output agreement. It is unit-tested for Mamba (float32 logits accepted; a float32 "reference" rejected) and for TransformerLens.
 - **Re-run:** the Mamba part of the approved Stage 4 compute is re-run unchanged.
 - **Idle box:** after the queue ended at 00:39 UTC the box sat idle for about 16 h (about $16), because nothing stopped it. From now on every queue ends with an automatic instance stop.
+
+## D23 — 2026-10-09 — PREREG-4: trained β = 4 has no linear regime (decided before any β-sweep result was inspected)
+- **What happened:** for the trained model at β = 4, calibration found no ε meeting the pre-registered linearity rule (median deviation ≤ 5%). The minimum was 6.5% at ε = 0.01. ε* is therefore undefined and the main phase stopped. All 18 other conditions completed.
+- **Interpretation:** near-hard-argmax attention makes the response non-smooth, because small perturbations flip attention targets. That is itself a finding about the "frozen" side.
+- **Handling (fixed now, before inspecting any temperature-sweep numbers):**
+  - **T1 and T2** need PCI(β = 4), which the pre-registered protocol cannot produce. They are reported as **NOT TESTABLE as pre-registered**.
+  - **Post hoc and clearly labelled:** PCI at β = 4 with ε = 0.01 (the most linear grid value, 6.5% median deviation), written to `results/m2_fresh2_posthoc/`. T1 and T2 are recomputed with it as *post hoc* only.
+  - **C2** needs only the chimera index, which does not use ε. It is computed for β = 4 with the pre-registered chimera code (a chimera-only pass, `--phase chimera`) and scored as pre-registered.

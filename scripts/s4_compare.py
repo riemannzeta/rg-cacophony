@@ -235,27 +235,45 @@ def main() -> None:
     pci4 = lambda m: np.array(m["per_passage_dir_pci_by_theta"][th4])
     lam4 = lambda m: np.array(m["per_passage_dir_lambda"])
     chi4 = lambda m: np.array(m["chimera"]["blocks16"]["chimera"])[:, None]
+    # D23: trained beta=4 has no linear regime; its chimera index comes from a chimera-only pass
+    for d in (f2.iterdir() if f2.exists() else []):
+        if d.name not in m4 and (d / "chimera.json").exists():
+            m4[d.name] = {**load(d / "chimera.json"), "_chimera_only": True}
+    has_pci = lambda m: m is not None and "per_passage_dir_pci_by_theta" in m
     if sweep_ok(tr4):
-        P_ = {b: pci4(cond4(tr4, b)) for b in CFG4.betas}
-        L_ = {b: lam4(cond4(tr4, b)) for b in CFG4.betas}
         C_ = {b: chi4(cond4(tr4, b)) for b in CFG4.betas}
-        d1, d2 = paired_boot(P_[1.0], P_[0.25]), paired_boot(P_[1.0], P_[4.0])
-        G4["T1"] = {"pci1_minus_pci025": d1, "pci1_minus_pci4": d2, "pass": d1["ci"][0] > 0 and d2["ci"][0] > 0}
-        means = {b: float(P_[b].mean()) for b in CFG4.betas}
-        G4["T2"] = {"pci_by_beta": means, "argmax": max(means, key=means.get),
-                    "pass": max(means, key=means.get) in CFG4.near_natural}
-        lm = {b: float(np.nanmean(L_[b])) for b in CFG4.betas}
-        mono = all(lm[a] < lm[b] for a, b in zip(CFG4.betas, CFG4.betas[1:]))
-        amin = min(lm, key=lambda b: abs(lm[b]))
-        G4["T3_exploratory"] = {"lambda_by_beta": lm, "monotone_increasing": mono, "argmin_abs": amin,
-                                "would_meet_draft_criterion": mono and amin in CFG4.near_natural}
         c1a, c1b = paired_boot(C_[1.0], C_[0.25]), paired_boot(C_[1.0], C_[4.0])
         G4["C2"] = {"chi1_minus_chi025": c1a, "chi1_minus_chi4": c1b, "pass": c1a["ci"][0] > 0 and c1b["ci"][0] > 0}
-        from scipy import stats as _st
-        G4["exploratory_spearman_pci_chi_over_beta"] = float(_st.spearmanr([means[b] for b in CFG4.betas],
-                                                                            [float(C_[b].mean()) for b in CFG4.betas])[0])
-        G4["exploratory_pci_dm_by_beta"] = {b: float(np.mean(cond4(tr4, b)["per_passage_dir_pci_dm"])) for b in CFG4.betas}
         G4["exploratory_chi_by_beta"] = {b: float(C_[b].mean()) for b in CFG4.betas}
+        pb = [b for b in CFG4.betas if has_pci(cond4(tr4, b))]
+        P_ = {b: pci4(cond4(tr4, b)) for b in pb}
+        L_ = {b: lam4(cond4(tr4, b)) for b in pb}
+        means = {b: float(P_[b].mean()) for b in pb}
+        if len(pb) == len(CFG4.betas):
+            d1, d2 = paired_boot(P_[1.0], P_[0.25]), paired_boot(P_[1.0], P_[4.0])
+            G4["T1"] = {"pci1_minus_pci025": d1, "pci1_minus_pci4": d2, "pass": d1["ci"][0] > 0 and d2["ci"][0] > 0}
+            G4["T2"] = {"pci_by_beta": means, "argmax": max(means, key=means.get),
+                        "pass": max(means, key=means.get) in CFG4.near_natural}
+        else:
+            missing = [b for b in CFG4.betas if b not in pb]
+            G4["T1_T2_not_testable"] = {"reason": f"no linear regime (eps* undefined) at beta={missing} (D23)",
+                                        "pci_by_beta_available": means,
+                                        "pci1_minus_pci025": paired_boot(P_[1.0], P_[0.25]) if 0.25 in P_ else None}
+            ph = REPO / "results" / "m2_fresh2_posthoc"
+            post = {b: load(ph / f"{tr4}__beta={b:g}" / "main.json") for b in missing}
+            if all(post.values()):
+                Pp = {**P_, **{b: pci4(post[b]) for b in missing}}
+                mp = {b: float(Pp[b].mean()) for b in CFG4.betas}
+                G4["T1_T2_post_hoc"] = {"label": "POST HOC (D23): beta=4 at eps=0.01",
+                                        "pci1_minus_pci4": paired_boot(Pp[1.0], Pp[4.0]), "pci_by_beta": mp,
+                                        "argmax": max(mp, key=mp.get)}
+        lm = {b: float(np.nanmean(L_[b])) for b in pb}
+        G4["T3_exploratory"] = {"lambda_by_beta": lm,
+                                "monotone_increasing": all(lm[a] < lm[b] for a, b in zip(pb, pb[1:])),
+                                "argmin_abs": min(lm, key=lambda b: abs(lm[b]))}
+        from scipy import stats as _st
+        G4["exploratory_spearman_pci_chi_over_beta"] = float(_st.spearmanr([means[b] for b in pb], [float(C_[b].mean()) for b in pb])[0])
+        G4["exploratory_pci_dm_by_beta"] = {b: float(np.mean(cond4(tr4, b)["per_passage_dir_pci_dm"])) for b in pb}
     ctrl4 = [f"{CFG.model_name}_step0"] + [f"{TRAINED}-shuffled{sd}" for sd in CFG.shuffle_seeds]
     if m4.get(tr4) and all(m4.get(c) for c in ctrl4):
         absdiff = lambda a, b: abs(np.nanmean(a)) - abs(np.nanmean(b))
