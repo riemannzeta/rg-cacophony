@@ -3,9 +3,13 @@
 #   scripts/gpu.sh start|stop|status|ip|ssh [cmd...]|push|pull
 # The public IP changes on every start; `start` and `ip` refresh the `gpu` git remote.
 set -euo pipefail
-ID=<instance-id>
-REGION=us-west-2
-KEY=~/<ssh-key>.pem
+# Set these for your own instance (not committed): RGC_INSTANCE_ID, RGC_SSH_KEY, RGC_REGION,
+# either in the environment or in an untracked .gpu.env file at the repo root.
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+[ -f "$REPO_ROOT/.gpu.env" ] && . "$REPO_ROOT/.gpu.env"
+ID=${RGC_INSTANCE_ID:?set RGC_INSTANCE_ID to your EC2 instance id}
+REGION=${RGC_REGION:-us-west-2}
+KEY=${RGC_SSH_KEY:-~/.ssh/id_ed25519}
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 SSH_OPTS=(-i "$KEY" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15)
 
