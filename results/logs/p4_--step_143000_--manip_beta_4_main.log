@@ -1,0 +1,12 @@
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 3475.06it/s]
+Loaded pretrained model pythia-160m into HookedTransformer
+Traceback (most recent call last):
+  File "/home/ubuntu/rgc-p4/scripts/s3_m2.py", line 467, in <module>
+    main()
+  File "/home/ubuntu/rgc-p4/scripts/s3_m2.py", line 437, in main
+    lat = main_grid(model, hooks, passages, dirs, eps, k_stride=args.k_stride)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/rgc-p4/scripts/s3_m2.py", line 126, in main_grid
+    E = torch.full((len(P),), eps, dtype=torch.float32)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: full(): argument 'fill_value' (position 2) must be Number, not NoneType

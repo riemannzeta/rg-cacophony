@@ -21,7 +21,7 @@ class Variant:
 
     @property
     def label(self) -> str:
-        base = f"{self.model_name}@step{self.step}"
+        base = self.model_name if not is_pythia(self.model_name) else f"{self.model_name}@step{self.step}"
         return base if self.shuffle_seed is None else f"{base}-shuffled{self.shuffle_seed}"
 
 
@@ -31,8 +31,16 @@ def registry(model_name: str = CFG.model_name) -> list[Variant]:
     return out
 
 
+def is_pythia(model_name: str) -> bool:
+    return model_name.startswith("pythia")
+
+
 def hf_repo(model_name: str) -> str:
-    return f"EleutherAI/{model_name}"
+    if is_pythia(model_name):
+        return f"EleutherAI/{model_name}"
+    if model_name == "gpt2":  # PREREG-5: second model family (no training checkpoints)
+        return "openai-community/gpt2"
+    raise ValueError(model_name)
 
 
 @torch.no_grad()
@@ -51,7 +59,8 @@ def shuffle_parameters_(module: torch.nn.Module, seed: int) -> None:
 
 def load_hf(variant: Variant) -> torch.nn.Module:
     model = AutoModelForCausalLM.from_pretrained(
-        hf_repo(variant.model_name), revision=f"step{variant.step}", dtype=torch.float32
+        hf_repo(variant.model_name), dtype=torch.float32,
+        **({"revision": f"step{variant.step}"} if is_pythia(variant.model_name) else {}),
     )
     model.eval()
     if variant.shuffle_seed is not None:

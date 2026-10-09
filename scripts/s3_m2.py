@@ -14,6 +14,7 @@ Outputs: results/m2/<name>/{calib,main,gating}.json ; raw lattices in results/ra
 import argparse
 import json
 import time
+from pathlib import Path
 from multiprocessing import Pool
 
 import numpy as np
@@ -36,6 +37,23 @@ TRAINED_M1 = REPO / "results" / "m1" / f"{CFG.model_name}_step{CFG.final_step}" 
 
 def seq(ids: list[int], bos: int) -> torch.Tensor:
     return torch.tensor([bos] + list(ids), dtype=torch.long)
+
+
+def passages_for(model, manifest=None) -> list[list[int]]:
+    """Passage token ids for this model. Pythia models use the manifest's stored GPT-NeoX ids; other
+    tokenizers (GPT-2, PREREG-5) re-tokenise the manifest's stored text and keep the first 256 tokens."""
+    ids = load_passages(manifest) if manifest else load_passages()
+    name = getattr(model.cfg, "model_name", "") or ""
+    if hasattr(model, "perturb_response") or "pythia" in name.lower():  # Mamba/Pythia share GPT-NeoX ids
+        return ids
+    m = json.loads(Path(manifest).read_text())
+    assert all("text" in p for p in m["passages"]), "manifest has no stored text for re-tokenisation"
+    out = []
+    for p in m["passages"]:
+        t = model.tokenizer(p["text"], add_special_tokens=False)["input_ids"][: CFG.passage_tokens]
+        assert len(t) == CFG.passage_tokens
+        out.append(t)
+    return out
 
 
 def respond(model, tokens, k, P, U, E, extra_hooks=None, chunk: int | None = None):
@@ -73,14 +91,15 @@ def f64_probe(model, model64, probe, fwd) -> float:
 # calibration
 # ---------------------------------------------------------------------------------------------
 
-def calibrate(model, model64, hooks, passages, dirs, chunk=None, k_stride: int = 1) -> dict:
+def calibrate(model, model64, hooks, passages, dirs, chunk=None, k_stride: int = 1, k_list=None,
+              eps_fallback: bool = False) -> dict:
     nL, eps_grid = model.cfg.n_layers, np.array(CFG.eps_grid)
     devs = {e: [] for e in range(len(eps_grid))}
     agree = {e: [0, 0] for e in range(len(eps_grid))}
     bos = model.tokenizer.bos_token_id
     for ids in passages:
         tokens = seq(ids, bos)
-        for k in range(0, nL, k_stride):
+        for k in (k_list if k_list is not None else range(0, nL, k_stride)):
             P, U, E = [], [], []
             for p in CFG.p_grid:
                 for u in dirs:
@@ -108,19 +127,23 @@ def calibrate(model, model64, hooks, passages, dirs, chunk=None, k_stride: int =
         rows.append({"eps": float(e), "median_rel_dev": float(np.median(d)), "p95_rel_dev": float(np.percentile(d, 95)),
                      "n_sites": int(d.size), "binary_agreement_theta_primary": agree[ie][0] / max(agree[ie][1], 1)})
     ok = [r["eps"] for r in rows if r["median_rel_dev"] <= CFG.linear_tol]
-    return {"rows": rows, "eps_star": max(ok) if ok else None}
+    if ok or not eps_fallback:
+        return {"rows": rows, "eps_star": max(ok) if ok else None}
+    best = min(rows, key=lambda r: r["median_rel_dev"])  # PREREG-5 pre-registered fallback (flagged)
+    return {"rows": rows, "eps_star": best["eps"], "eps_star_fallback": True}
 
 
 # ---------------------------------------------------------------------------------------------
 # main grid
 # ---------------------------------------------------------------------------------------------
 
-def main_grid(model, hooks, passages, dirs, eps: float, k_stride: int = 1) -> dict:
+def main_grid(model, hooks, passages, dirs, eps: float, k_stride: int = 1, k_max: int | None = None) -> dict:
     nL, bos = model.cfg.n_layers, model.tokenizer.bos_token_id
-    lattices = {k: [] for k in range(0, nL, k_stride)}  # k -> [n, p, d, S_k, T]
+    ks = [k for k in range(0, nL, k_stride) if k_max is None or k <= k_max]
+    lattices = {k: [] for k in ks}  # k -> [n, p, d, S_k, T]
     for ids in passages:
         tokens = seq(ids, bos)
-        for k in range(0, nL, k_stride):
+        for k in ks:
             P = torch.tensor([p for p in CFG.p_grid for _ in dirs])
             U = torch.stack([u for _ in CFG.p_grid for u in dirs])
             E = torch.full((len(P),), eps, dtype=torch.float32)
@@ -130,22 +153,24 @@ def main_grid(model, hooks, passages, dirs, eps: float, k_stride: int = 1) -> di
 
 
 def analyse_main(lat: dict, nL: int, workers: int, dm_frac: float | None = None) -> dict:
-    N, nP, nD = lat[0].shape[:3]
+    ks = sorted(lat)  # injection layers present (contiguous 0..nL-1 except with --k-stride/--k-max)
+    kidx = {k: i for i, k in enumerate(ks)}
+    N, nP, nD = lat[ks[0]].shape[:3]
     thetas = list(CFG.theta_grid)
     tasks, index = [], []
-    for k in range(nL):
+    for k in ks:
         for n in range(N):
             for ip, p in enumerate(CFG.p_grid):
                 for d in range(nD):
-                    tasks.append((lat[k][n, ip, d], p, thetas, dm_frac)); index.append((k, n, ip, d))
+                    tasks.append((lat[k][n, ip, d], p, thetas, dm_frac)); index.append((kidx[k], n, ip, d))
     if workers > 1:
         with Pool(workers) as pool:
             res = pool.map(pci_task, tasks, chunksize=64)
     else:
         res = [pci_task(t) for t in tasks]
-    PCI = np.zeros((nL, N, nP, nD, len(thetas)))
+    PCI = np.zeros((len(ks), N, nP, nD, len(thetas)))
     P1 = np.zeros_like(PCI)
-    DM = np.zeros((nL, N, nP, nD))
+    DM = np.zeros((len(ks), N, nP, nD))
     for (k, n, ip, d), r in zip(index, res):
         PCI[k, n, ip, d] = [x[0] for x in r[: len(thetas)]]
         P1[k, n, ip, d] = [x[1] for x in r[: len(thetas)]]
@@ -154,6 +179,8 @@ def analyse_main(lat: dict, nL: int, workers: int, dm_frac: float | None = None)
 
     ti = thetas.index(CFG.theta_primary)
     kmax = nL - CFG.min_downstream_layers  # k <= n_layers - 3
+    ks_prim = [k for k in ks if k <= kmax]
+    pidx = np.array([kidx[k] for k in ks_prim])  # positions of the primary injection layers
     rng = np.random.default_rng(CFG.boot_seed)
     idx_n = rng.integers(0, N, size=(CFG.n_boot, N))
     idx_d = rng.integers(0, nD, size=(CFG.n_boot, nD))
@@ -161,11 +188,11 @@ def analyse_main(lat: dict, nL: int, workers: int, dm_frac: float | None = None)
     def crossed_boot(M):  # M: [N, nD] -> bootstrap means
         return np.array([M[idx_n[b]][:, idx_d[b]].mean() for b in range(CFG.n_boot)])
 
-    per_nd = PCI[: kmax + 1, :, :, :, :].mean(axis=(0, 2))  # [N, nD, theta]
+    per_nd = PCI[pidx].mean(axis=(0, 2))  # [N, nD, theta]
     # PREREG-2 (A): reach = mean p1 over the primary lattices; local response = self-column gain at
     # the final slice (the perturbed position's own response), both per (passage, direction).
-    reach_nd = P1[: kmax + 1, ..., ti].mean(axis=(0, 2))  # [N, nD]
-    local_nd = np.mean([[lat[k][:, ip, :, -1, p] for ip, p in enumerate(CFG.p_grid)] for k in range(kmax + 1)],
+    reach_nd = P1[pidx, ..., ti].mean(axis=(0, 2))  # [N, nD]
+    local_nd = np.mean([[lat[k][:, ip, :, -1, p] for ip, p in enumerate(CFG.p_grid)] for k in ks_prim],
                        axis=(0, 1))  # [N, nD]
     pci_theta = []
     for j, th in enumerate(thetas):
@@ -181,7 +208,7 @@ def analyse_main(lat: dict, nL: int, workers: int, dm_frac: float | None = None)
     # spread at every cell, primary theta
     p_idx = {p: i for i, p in enumerate(CFG.p_grid)}
     spread = {}
-    for k in range(nL):
+    for k in ks:
         for p in CFG.p_grid:
             G = lat[k][:, p_idx[p]]  # [N, nD, S_k, T]
             S = spread_counts(G, p, CFG.theta_primary).mean(1)  # [N, t]
@@ -217,14 +244,15 @@ def analyse_main(lat: dict, nL: int, workers: int, dm_frac: float | None = None)
         "frac_power_wins_decisively": float(np.mean(np.array(daic) > CFG.aic_decisive)) if daic else None,
     }
     ip, pz = p_idx[CFG.z_primary_p], CFG.z_primary_p
-    self_col = {k: [float(lat[k][:, ip, :, s, pz].mean()) for s in range(lat[k].shape[3])] for k in range(nL)}
+    self_col = {k: [float(lat[k][:, ip, :, s, pz].mean()) for s in range(lat[k].shape[3])] for k in ks}
     # PREREG-3: per (passage, direction) reach at every theta, threshold-free spread, density-matched PCI
-    reach_by_theta_nd = P1[: kmax + 1].mean(axis=(0, 2))  # [N, nD, theta]
+    reach_by_theta_nd = P1[pidx].mean(axis=(0, 2))  # [N, nD, theta]
     seff_nd = np.mean([participation_spread(lat[k][:, ip], p).mean(-1)  # [N, nD] mean over slices
-                       for k in range(kmax + 1) for ip, p in enumerate(CFG.p_grid)], axis=0)
+                       for k in ks_prim for ip, p in enumerate(CFG.p_grid)], axis=0)
     # PREREG-4: perturbation growth exponent lambda = OLS slope over depth of 0.5*log(mean_{q>p} G^2)
     lam = np.full((kmax + 1, nP, N, nD), np.nan)
-    for k in range(kmax + 1):
+    lam_late = np.full_like(lam, np.nan)  # PREREG-5 secondary: slope over t >= 3 only
+    for k in ks_prim:
         for ip, p in enumerate(CFG.p_grid):
             E = (lat[k][:, ip][..., 1:, p + 1 :].astype(np.float64) ** 2).mean(-1)  # [N, nD, S_k-1]
             t = np.arange(1, E.shape[-1] + 1, dtype=float)
@@ -233,8 +261,12 @@ def analyse_main(lat: dict, nL: int, workers: int, dm_frac: float | None = None)
                     ok = E[n, d] > 0
                     if ok.sum() >= 3:
                         lam[k, ip, n, d] = np.polyfit(t[ok], 0.5 * np.log(E[n, d][ok]), 1)[0]
+                    okl = ok & (t >= 3)
+                    if okl.sum() >= 3:
+                        lam_late[k, ip, n, d] = np.polyfit(t[okl], 0.5 * np.log(E[n, d][okl]), 1)[0]
     lam_nd = np.nanmean(lam, axis=(0, 1))  # [N, nD]
     extra = {
+        "per_passage_dir_lambda_late": np.nanmean(lam_late, axis=(0, 1)).tolist(),
         "per_passage_dir_lambda": lam_nd.tolist(),
         "lambda_mean": float(np.nanmean(lam_nd)),
         "lambda_by_k": np.nanmean(lam, axis=(1, 2, 3)).tolist(),
@@ -243,14 +275,14 @@ def analyse_main(lat: dict, nL: int, workers: int, dm_frac: float | None = None)
     }
     if dm_frac:
         extra["dm_frac"] = dm_frac
-        extra["per_passage_dir_pci_dm"] = DM[: kmax + 1].mean(axis=(0, 2)).tolist()
+        extra["per_passage_dir_pci_dm"] = DM[pidx].mean(axis=(0, 2)).tolist()
     return {
         **extra,
         "pci_by_theta": pci_theta,
         "pci_primary": pci_theta[ti],
         "pci_auc_logtheta": {"value": float(auc_nd.mean()), "ci": [float(x) for x in ci(auc_boot)]},
         "pci_by_k_primary_theta": PCI[..., ti].mean(axis=(1, 2, 3)).tolist(),
-        "pci_by_p_primary_theta": PCI[: kmax + 1, ..., ti].mean(axis=(0, 1, 3)).tolist(),
+        "pci_by_p_primary_theta": PCI[pidx, ..., ti].mean(axis=(0, 1, 3)).tolist(),
         "per_passage_dir_pci_primary": per_nd[:, :, ti].tolist(),  # for paired comparisons in s4
         "per_passage_dir_pci_by_theta": {str(th): per_nd[:, :, j].tolist() for j, th in enumerate(thetas)},
         "per_passage_dir_reach_primary": reach_nd.tolist(),
@@ -391,6 +423,13 @@ def main() -> None:
     ap.add_argument("--dm-frac", type=float, default=None, help="density-matched PCI fraction (PREREG-3: 0.2)")
     ap.add_argument("--chimera", action="store_true", help="PREREG-4: chimera/metastability/eff-dim per passage")
     ap.add_argument("--eps-override", type=float, default=None, help="POST HOC: use this eps instead of eps* (D23)")
+    # PREREG-5 design options (defaults reproduce every earlier protocol)
+    ap.add_argument("--n-dirs", type=int, default=CFG.n_dirs, help="use the first n of the seeded directions")
+    ap.add_argument("--calib-passages", type=int, default=CFG.n_calib_passages)
+    ap.add_argument("--calib-dirs", type=int, default=CFG.n_calib_dirs)
+    ap.add_argument("--calib-k", default=None, help="comma list of injection layers for calibration (default: all)")
+    ap.add_argument("--eps-fallback", action="store_true", help="if no eps meets the tolerance, use the min-deviation eps (flagged)")
+    ap.add_argument("--k-max", type=int, default=None, help="only inject at k <= k_max in the main grid")
     args = ap.parse_args()
     set_determinism(CFG.master_seed)
     if args.mamba:
@@ -408,8 +447,8 @@ def main() -> None:
     raw.mkdir(parents=True, exist_ok=True)
     model = loader()
     hooks = manipulation_hooks(args.manip, model.cfg.n_layers)
-    dirs = list(unit_directions(model.cfg.d_model, CFG.n_dirs, CFG.dir_seed))
-    passages = (load_passages(REPO / args.passages) if args.passages else load_passages())[: args.n_passages]
+    dirs = list(unit_directions(model.cfg.d_model, CFG.n_dirs, CFG.dir_seed))[: args.n_dirs]
+    passages = passages_for(model, REPO / args.passages if args.passages else None)[: args.n_passages]
     phases = ["calib", "main", "gating"] if args.phase == "all" else [args.phase]
     meta = {"variant": v.label, "manip": args.manip, "env": env_info(),
             "passages_manifest": args.passages or "stimuli/wikitext_manifest.json"}
@@ -425,8 +464,9 @@ def main() -> None:
             fwd = lambda m, x: m(x)
         probe = torch.tensor([model.tokenizer.bos_token_id] + passages[0][:64])[None].to(args.device)
         f64_check = f64_probe(model, model64, probe, fwd)
-        cal = calibrate(model, model64, hooks, passages[: CFG.n_calib_passages], dirs[: CFG.n_calib_dirs],
-                        chunk=args.calib_chunk, k_stride=args.k_stride)
+        k_list = [int(x) for x in args.calib_k.split(",")] if args.calib_k else None
+        cal = calibrate(model, model64, hooks, passages[: args.calib_passages], dirs[: args.calib_dirs],
+                        chunk=args.calib_chunk, k_stride=args.k_stride, k_list=k_list, eps_fallback=args.eps_fallback)
         cal["k_stride"] = args.k_stride
         cal["f32_vs_f64_logit_rel_maxdiff"] = f64_check
         del model64
@@ -441,7 +481,7 @@ def main() -> None:
         meta["eps_override_post_hoc"] = args.eps_override
     if "main" in phases:
         t0 = time.time()
-        lat = main_grid(model, hooks, passages, dirs, eps, k_stride=args.k_stride)
+        lat = main_grid(model, hooks, passages, dirs, eps, k_stride=args.k_stride, k_max=args.k_max)
         tag = "m2" if args.out_root == "results/m2" else args.out_root.rstrip("/").split("/")[-1]
         np.savez_compressed(raw / f"{tag}_{name}.npz", **{f"k{k}": v for k, v in lat.items()})
         if args.mamba:  # PREREG-2 C: primary = depth stride 2 (even k, every second slice); secondary = full

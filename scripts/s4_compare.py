@@ -14,6 +14,7 @@ from rgc.config import CFG
 from rgc.config_prereg2 import CFG2
 from rgc.config_prereg3 import CFG3
 from rgc.config_prereg4 import CFG4
+from rgc.config_prereg5 import CFG5, run_name
 from rgc.determinism import REPO, env_info
 from rgc.stats import ci
 
@@ -294,6 +295,35 @@ def main() -> None:
     if not G4:
         G4["pending"] = True
 
+    # ---- PREREG-5 (lambda zero-crossing across scale and family, third fresh set) --------------
+    G5 = card["PREREG-5"] = {}
+    f3 = REPO / CFG5.out_root
+    m5 = {d.name: load(d / "main.json") for d in f3.iterdir() if (d / "main.json").exists()} if f3.exists() else {}
+    lamm = lambda nm: np.array(m5[nm]["per_passage_dir_lambda"], float)
+    pos_boot = lambda nm: paired_boot(lamm(nm), np.zeros_like(lamm(nm)), fn=lambda a, b: np.nanmean(a) - np.nanmean(b))
+    for model, _ in CFG5.models:
+        r = {}
+        tr = {b: run_name(model, b) for b in CFG5.betas_trained}
+        if all(n in m5 for n in tr.values()):
+            lo_b, hi_b = pos_boot(tr[CFG5.crossing_low]), pos_boot(tr[CFG5.crossing_high])
+            r["P1"] = {"lambda_at_0.75": lo_b, "lambda_at_1.5": hi_b,
+                       "fallback_eps_used": {b: bool(load(f3 / n / "calib.json").get("eps_star_fallback")) for b, n in tr.items()},
+                       "pass": lo_b["ci"][1] < 0 and hi_b["ci"][0] > 0}
+            lm = {b: float(np.nanmean(lamm(n))) for b, n in tr.items()}
+            r["P2"] = {"lambda_by_beta": lm, "pass": all(lm[a] < lm[b] for a, b in zip(CFG5.betas_trained, CFG5.betas_trained[1:]))}
+            r["secondary_lambda_late_by_beta"] = {b: float(np.nanmean(m5[n]["per_passage_dir_lambda_late"])) for b, n in tr.items()}
+            r["secondary_pci_by_beta"] = {b: float(np.mean(m5[n]["per_passage_dir_pci_by_theta"]["0.01"])) for b, n in tr.items()}
+        sh = {b: run_name(model, b, shuffled=True) for b in CFG5.betas_shuffled}
+        ctrls = [sh[1.0]] + ([run_name(model, step0=True)] if model != "gpt2" else [])
+        if all(n in m5 for n in list(sh.values()) + ctrls):
+            p3 = {n: pos_boot(n) for n in list(sh.values()) + ctrls[1:]}
+            r["P3"] = {"lambda_controls": p3, "pass": all(v["ci"][0] > 0 for v in p3.values())}
+            if run_name(model) in m5:
+                absd = lambda a, b: abs(np.nanmean(a)) - abs(np.nanmean(b))
+                p4 = {c: paired_boot(lamm(c), lamm(run_name(model)), fn=absd) for c in ctrls}
+                r["P4"] = {"abs_lambda_control_minus_trained": p4, "pass": all(v["ci"][0] > 0 for v in p4.values())}
+        G5[model] = r or "pending"
+
     (R / "scorecard.json").write_text(json.dumps(card, indent=1, default=float))
     lines = ["# Scorecard (mechanical; see scripts/s4_compare.py)", ""]
     def emit(name, d):
@@ -322,6 +352,10 @@ def main() -> None:
         emit(f"PREREG-3 {k}", v)
     for k, v in card["PREREG-4"].items():
         emit(f"PREREG-4 {k}", v)
+    for model, v in card["PREREG-5"].items():
+        if isinstance(v, dict):
+            for k2, v2 in v.items():
+                emit(f"PREREG-5 {model} {k2}", v2)
     (R / "SCORECARD.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
 

@@ -178,3 +178,19 @@ def test_lambda_sign_on_synthetic_lattices(s3):
             lat[k] = np.broadcast_to(g, (N, nP, nD, S, T)).copy()
         res = s3.analyse_main(lat, 3, workers=1)
         assert abs(res["lambda_mean"] - rate) < 1e-9
+
+
+def test_passages_for_gpt2_retokenises_and_pythia_uses_ids(s3):
+    from types import SimpleNamespace
+
+    from transformers import AutoTokenizer
+
+    from rgc.determinism import REPO
+
+    man = REPO / "stimuli" / "wikitext_fresh3_manifest.json"
+    g2 = SimpleNamespace(cfg=SimpleNamespace(model_name="gpt2"), tokenizer=AutoTokenizer.from_pretrained("openai-community/gpt2"))
+    py = SimpleNamespace(cfg=SimpleNamespace(model_name="pythia-410m"), tokenizer=None)
+    pg, pp = s3.passages_for(g2, man), s3.passages_for(py, man)
+    assert len(pg) == len(pp) == 64 and all(len(x) == 256 for x in pg)
+    assert pp == load_passages(man)
+    assert pg[0] != pp[0]  # different tokenizer, different ids

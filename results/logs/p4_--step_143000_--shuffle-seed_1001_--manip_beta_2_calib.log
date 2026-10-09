@@ -1,0 +1,10 @@
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 3412.29it/s]
+Loaded pretrained model pythia-160m into HookedTransformer
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 3412.38it/s]
+Loaded pretrained model pythia-160m into HookedTransformer
+Changing model dtype to torch.float64
+/home/ubuntu/rgc-p4/scripts/s3_m2.py:102: RuntimeWarning: invalid value encountered in divide
+  devs[ie].append((np.abs(g - ref) / ref)[sel].astype(np.float32))
+/home/ubuntu/rgc-p4/scripts/s3_m2.py:102: RuntimeWarning: divide by zero encountered in divide
+  devs[ie].append((np.abs(g - ref) / ref)[sel].astype(np.float32))
+calib done eps*=0.01

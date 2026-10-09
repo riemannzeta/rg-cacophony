@@ -1,0 +1,20 @@
+EXIT=0/0 --step 143000 --manip beta=0.25 15:16:18
+EXIT=0/0 --step 143000 --manip beta=0.5 15:33:25
+EXIT=0/0 --step 143000 --manip beta=0.75 15:50:55
+EXIT=0/0 --step 143000 16:07:28
+EXIT=0/0 --step 143000 --manip beta=1.5 16:25:29
+EXIT=0/0 --step 143000 --manip beta=2 16:43:48
+EXIT=0/1 --step 143000 --manip beta=4 16:51:43
+EXIT=0/0 --step 0 17:05:17
+EXIT=0/0 --step 512 17:20:39
+EXIT=0/0 --step 4000 17:36:39
+EXIT=0/0 --step 143000 --shuffle-seed 1001 17:51:59
+EXIT=0/0 --step 143000 --shuffle-seed 1002 18:07:19
+EXIT=0/0 --step 143000 --shuffle-seed 1003 18:22:22
+EXIT=0/0 --step 143000 --shuffle-seed 1001 --manip beta=0.25 18:37:55
+EXIT=0/0 --step 143000 --shuffle-seed 1001 --manip beta=0.5 18:53:48
+EXIT=0/0 --step 143000 --shuffle-seed 1001 --manip beta=0.75 19:09:58
+EXIT=0/0 --step 143000 --shuffle-seed 1001 --manip beta=1.5 19:26:55
+EXIT=0/0 --step 143000 --shuffle-seed 1001 --manip beta=2 19:44:15
+EXIT=0/0 --step 143000 --shuffle-seed 1001 --manip beta=4 20:02:20
+ALLDONE Thu Oct  8 20:02:20 UTC 2026
