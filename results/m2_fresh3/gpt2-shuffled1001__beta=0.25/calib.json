@@ -1,0 +1,125 @@
+{
+ "variant": "gpt2-shuffled1001",
+ "manip": "beta=0.25",
+ "env": {
+  "git_sha": "edef8ae2c8673406c26cee95d0397d5515209219",
+  "config_hash": "26fef58ef05e1363",
+  "host": "ip-172-31-28-143",
+  "python": "3.12.3",
+  "platform": "Linux-6.17.0-1009-aws-x86_64-with-glibc2.39",
+  "device": "NVIDIA A10G",
+  "cuda": "13.0",
+  "packages": {
+   "torch": "2.14.1",
+   "transformer-lens": "3.9.0",
+   "transformers": "5.18.0",
+   "numpy": "2.5.3",
+   "scipy": "1.18.1",
+   "pandas": "3.0.6",
+   "datasets": "5.0.1"
+  },
+  "deterministic": true,
+  "native_overrides_disabled": [
+   "native",
+   "triton"
+  ]
+ },
+ "passages_manifest": "stimuli/wikitext_fresh3_manifest.json",
+ "rows": [
+  {
+   "eps": 1e-06,
+   "median_rel_dev": 33.37216567993164,
+   "p95_rel_dev": 60.71077346801758,
+   "n_sites": 56600,
+   "binary_agreement_theta_primary": 0.02609747023809524
+  },
+  {
+   "eps": 3.162277660168379e-06,
+   "median_rel_dev": 10.869699478149414,
+   "p95_rel_dev": 19.66096305847168,
+   "n_sites": 56600,
+   "binary_agreement_theta_primary": 0.23838355654761906
+  },
+  {
+   "eps": 1e-05,
+   "median_rel_dev": 3.339057445526123,
+   "p95_rel_dev": 6.17178201675415,
+   "n_sites": 56600,
+   "binary_agreement_theta_primary": 0.8137369791666667
+  },
+  {
+   "eps": 3.1622776601683795e-05,
+   "median_rel_dev": 0.8733165264129639,
+   "p95_rel_dev": 1.753249168395996,
+   "n_sites": 56600,
+   "binary_agreement_theta_primary": 0.996382068452381
+  },
+  {
+   "eps": 0.0001,
+   "median_rel_dev": 0.16814637184143066,
+   "p95_rel_dev": 0.4000513255596161,
+   "n_sites": 56600,
+   "binary_agreement_theta_primary": 0.9994605654761904
+  },
+  {
+   "eps": 0.00031622776601683794,
+   "median_rel_dev": 0.023196067661046982,
+   "p95_rel_dev": 0.07022127509117126,
+   "n_sites": 56600,
+   "binary_agreement_theta_primary": 0.9999255952380952
+  },
+  {
+   "eps": 0.001,
+   "median_rel_dev": 0.002956239739432931,
+   "p95_rel_dev": 0.012531980872154236,
+   "n_sites": 56600,
+   "binary_agreement_theta_primary": 0.9999813988095239
+  },
+  {
+   "eps": 0.0031622776601683794,
+   "median_rel_dev": 0.0007726548938080668,
+   "p95_rel_dev": 0.0030896058306097984,
+   "n_sites": 56600,
+   "binary_agreement_theta_primary": 1.0
+  },
+  {
+   "eps": 0.01,
+   "median_rel_dev": 0.0005615224945358932,
+   "p95_rel_dev": 0.001615343033336103,
+   "n_sites": 56600,
+   "binary_agreement_theta_primary": 0.9999813988095239
+  },
+  {
+   "eps": 0.03162277660168379,
+   "median_rel_dev": 0.0014418744249269366,
+   "p95_rel_dev": 0.004084779415279627,
+   "n_sites": 56600,
+   "binary_agreement_theta_primary": 0.9999627976190476
+  },
+  {
+   "eps": 0.1,
+   "median_rel_dev": 0.004524657502770424,
+   "p95_rel_dev": 0.013484485447406769,
+   "n_sites": 56600,
+   "binary_agreement_theta_primary": 0.9998325892857143
+  },
+  {
+   "eps": 0.31622776601683794,
+   "median_rel_dev": 0.029772300273180008,
+   "p95_rel_dev": 0.06207270175218582,
+   "n_sites": 56600,
+   "binary_agreement_theta_primary": 0.9989397321428571
+  },
+  {
+   "eps": 1.0,
+   "median_rel_dev": 0.22698815166950226,
+   "p95_rel_dev": 0.2848702669143677,
+   "n_sites": 56600,
+   "binary_agreement_theta_primary": 0.9937220982142857
+  }
+ ],
+ "eps_star": 0.31622776601683794,
+ "k_stride": 1,
+ "f32_vs_f64_logit_rel_maxdiff": 1.1920835373136833e-06,
+ "seconds": 36.9724817276001
+}

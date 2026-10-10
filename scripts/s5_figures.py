@@ -216,6 +216,81 @@ def fig_growth(path):
     P._save(fig, path)
 
 
+F3_MODELS = [("pythia-160m_step143000", "Pythia-160M"), ("pythia-410m_step143000", "Pythia-410M"),
+             ("pythia-1b_step143000", "Pythia-1B"), ("gpt2", "GPT-2 small")]
+F3_BETAS = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0]
+
+
+def _mean_ci(per_passage_dir, rng, n=2000):
+    """Mean and 95% CI of the mean, bootstrapping over passages (rows) of a [passage, direction] array."""
+    arr = np.nanmean(np.array(per_passage_dir, float), axis=1)
+    boots = [np.mean(arr[rng.integers(0, len(arr), len(arr))]) for _ in range(n)]
+    return float(np.mean(arr)), *np.percentile(boots, [2.5, 97.5])
+
+
+def _f3(name, b):
+    return load(R / "m2_fresh3" / (name if b == 1.0 else f"{name}__beta={b:g}") / "main.json")
+
+
+def fig_pci_across_models(path):
+    """Fig 7: PREREG-5 secondary (pre-specified, not scored): PCI and reach at theta = 0.01 vs attention
+    temperature in four models, on PREREG-5's fresh passages."""
+    rng = np.random.default_rng(0)
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(10.5, 3.6), constrained_layout=True)
+    for slot, (name, lab) in enumerate(F3_MODELS):
+        rows = [(b, _mean_ci(m["per_passage_dir_pci_by_theta"]["0.01"], rng),
+                 _mean_ci(m["per_passage_dir_reach_by_theta"]["0.01"], rng))
+                for b in F3_BETAS if (m := _f3(name, b))]
+        bs = [r[0] for r in rows]
+        for a, j in ((ax, 1), (ax2, 2)):
+            mu = [r[j][0] for r in rows]
+            a.plot(bs, mu, color=P.SERIES[slot], marker="o", markersize=4, label=lab)
+            a.fill_between(bs, [r[j][1] for r in rows], [r[j][2] for r in rows], color=P.SERIES[slot], alpha=0.15,
+                           linewidth=0)
+    for a in (ax, ax2):
+        a.set_xscale("log", base=2)
+        a.axvline(1, color=P.MUTED, linestyle=":", linewidth=1)
+        a.set_xlabel("attention inverse temperature β (log scale; 1 = as trained)")
+    ax.set_title("PCI (θ = 0.01): flattening attention lowers it in every model", loc="left", fontsize=9.5)
+    ax2.set_title("reach: holds (Pythia) or rises (GPT-2) as attention flattens", loc="left", fontsize=9.5)
+    ax2.set_ylim(0, 0.6)
+    ax.legend(fontsize=8)
+    fig.suptitle("Four models, new text: the anaesthesia signature generalises (pre-specified secondary measure)",
+                 x=0.0, ha="left", fontweight="bold", color=P.INK)
+    P._save(fig, path)
+
+
+def fig_lambda_across_models(path):
+    """Fig 8: PREREG-5 primary: growth exponent lambda vs attention temperature in four models, with the
+    weight-shuffled copies (beta = 0.25, 1, 2) and untrained step 0 (beta = 1, Pythia only)."""
+    rng = np.random.default_rng(0)
+    fig, axes = plt.subplots(1, 4, figsize=(12, 3.4), constrained_layout=True, sharey=True)
+    for slot, (ax, (name, lab)) in enumerate(zip(axes, F3_MODELS)):
+        shuf = name.replace("_step143000", "_step143000-shuffled1001") if "pythia" in name else "gpt2-shuffled1001"
+        for base, colour, clab in ((name, P.SERIES[slot], "trained"), (shuf, P.MUTED, "shuffled")):
+            rows = [(b, _mean_ci(m["per_passage_dir_lambda"], rng)) for b in F3_BETAS if (m := _f3(base, b))]
+            bs = [r[0] for r in rows]
+            ax.plot(bs, [r[1][0] for r in rows], color=colour, marker="o", markersize=4, label=clab,
+                    linestyle="-" if clab == "trained" else "--")
+            ax.fill_between(bs, [r[1][1] for r in rows], [r[1][2] for r in rows], color=colour, alpha=0.15,
+                            linewidth=0)
+        if "pythia" in name and (m := load(R / "m2_fresh3" / name.replace("143000", "0") / "main.json")):
+            mu, lo, hi = _mean_ci(m["per_passage_dir_lambda"], rng)
+            ax.errorbar([1.0], [mu], yerr=[[mu - lo], [hi - mu]], color=P.SERIES[4], marker="D", markersize=5,
+                        linestyle="none", label="untrained")
+        ax.axhline(0, color=P.AXIS, linewidth=1)
+        ax.axvline(1, color=P.MUTED, linestyle=":", linewidth=1)
+        ax.set_xscale("log", base=2)
+        ax.set_title(lab, loc="left", fontsize=10)
+        ax.set_xlabel("β (log scale; 1 = as trained)")
+    axes[0].set_ylabel("growth exponent λ per layer\n(<0 dies out · 0 poised · >0 grows)")
+    axes[0].legend(fontsize=7.5, loc="upper left")
+    fig.suptitle("Does the trained model sit at the edge (λ = 0) at its natural temperature? "
+                 "Yes in the two small models; no at 410M and 1B (pre-registered)",
+                 x=0.0, ha="left", fontweight="bold", color=P.INK)
+    P._save(fig, path)
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     if (R / "figures" / "zap_examples.npz").exists():
@@ -226,6 +301,9 @@ def main() -> None:
     fig_lambda(OUT / "fig4_growth_exponent.png")
     fig_temperature(OUT / "fig5_temperature_sweep.png")
     fig_growth(OUT / "fig6_growth_curves.png")
+    if (R / "m2_fresh3").exists():
+        fig_pci_across_models(OUT / "fig7_pci_across_models.png")
+        fig_lambda_across_models(OUT / "fig8_lambda_across_models.png")
     print("figures ->", sorted(p.name for p in OUT.glob("*.png")))
 
 

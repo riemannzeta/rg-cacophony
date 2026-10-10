@@ -8,10 +8,13 @@ and position p, and report:
   - lambda_all  : slope of 0.5*log E over all t (as pre-registered)
   - lambda_late : slope over t >= 3 only (excludes the build-up)
   - E curves for the figure.
-Runs where the raw lattices live (results/raw/m2_fresh2_*.npz). Writes results/m2_fresh2/growth_curves.json.
+Runs where the raw lattices live (results/raw/m2_<tag>_*.npz). Writes results/m2_<tag>/growth_curves.json.
+Usage: p4b_growth_curves.py [tag], tag = fresh2 (default; PREREG-4, exploratory) or fresh3 (PREREG-5, where
+the averaged-curve lambda is a pre-specified secondary, reported and not scored).
 """
 
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -20,7 +23,8 @@ from rgc.config import CFG
 from rgc.determinism import REPO
 
 RAW = REPO / "results" / "raw"
-OUT = REPO / "results" / "m2_fresh2" / "growth_curves.json"
+LABELS = {"fresh2": "EXPLORATORY follow-up to PREREG-4 S1/T3 (not pre-registered)",
+          "fresh3": "PREREG-5 secondary (pre-specified; reported, not scored): averaged-curve lambda"}
 KMAX = CFG.min_downstream_layers  # k <= n_layers - 3
 
 
@@ -30,12 +34,13 @@ def slope(t, y):
 
 
 def main() -> None:
-    out = {"label": "EXPLORATORY follow-up to PREREG-4 S1/T3 (not pre-registered)", "conditions": {}}
-    for f in sorted(RAW.glob("m2_fresh2_*.npz")):
-        name = f.stem.replace("m2_fresh2_", "")
+    tag = sys.argv[1] if len(sys.argv) > 1 else "fresh2"
+    out = {"label": LABELS[tag], "conditions": {}}
+    for f in sorted(RAW.glob(f"m2_{tag}_*.npz")):
+        name = f.stem.replace(f"m2_{tag}_", "")
         z = np.load(f)
         ks = sorted(int(k[1:]) for k in z.files)
-        nL = max(ks) + 1
+        nL = ks[0] + z[f"k{ks[0]}"].shape[3] - 1  # slices L = k..n, so n = k + S_k - 1
         curves, lam_all, lam_late = {}, [], []
         for k in [k for k in ks if k <= nL - KMAX]:
             G = z[f"k{k}"].astype(np.float64)  # [N, nP, nD, S_k, T]
@@ -49,7 +54,7 @@ def main() -> None:
         out["conditions"][name] = {"lambda_all_mean": float(np.nanmean(lam_all)),
                                    "lambda_late_mean": float(np.nanmean(lam_late)), "curves": curves}
         print(f"{name:52s} lambda_all {np.nanmean(lam_all):+.4f}  lambda_late(t>=3) {np.nanmean(lam_late):+.4f}")
-    OUT.write_text(json.dumps(out))
+    (REPO / "results" / f"m2_{tag}" / "growth_curves.json").write_text(json.dumps(out))
 
 
 if __name__ == "__main__":

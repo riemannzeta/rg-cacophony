@@ -13,8 +13,8 @@
 - **Deviation log:** every deviation in `DECISIONS.md`.
 
 **What held up:**
-1. **A PCI analogue that behaves like clinical PCI under an "anaesthesia" manipulation.** Flattening attention lowers the perturbational complexity of the response by about a third, while the response's reach is preserved and its threshold-free spread more than triples. This was found exploratorily and then **replicated on fresh data with all four pre-registered predictions passing** (PREREG-3).
-2. **An edge-of-chaos signature.** The perturbation-growth exponent λ of trained Pythia-160M is ≈ 0 at its natural attention temperature, while every control is clearly positive (pre-registered S1: pass). Across temperatures, λ rises smoothly through zero almost exactly at β = 1 (exploratory, PREREG-4 T3). A confirmatory test across scale and model family is in §4.6.
+1. **A PCI analogue that behaves like clinical PCI under an "anaesthesia" manipulation.** Flattening attention lowers the perturbational complexity of the response by about a third, while the response's reach is preserved and its threshold-free spread more than triples. This was found exploratorily and then **replicated on fresh data with all four pre-registered predictions passing** (PREREG-3). In PREREG-5 the same fall appeared in all four models tested (Pythia-160M, 410M and 1B, and GPT-2 small; a pre-specified secondary measure, reported but not scored).
+2. **An edge-of-chaos signature, in small models only.** The perturbation-growth exponent λ of trained Pythia-160M is ≈ 0 at its natural attention temperature, while every control is clearly positive (pre-registered S1: pass). Across temperatures, λ rises smoothly through zero almost exactly at β = 1 (exploratory, PREREG-4 T3). The confirmatory test (PREREG-5, §4.6) replicated the zero crossing in Pythia-160M on fresh text and in GPT-2 small, but **not** in Pythia-410M or 1B, where trained λ is positive at every temperature tested. The pre-registered headline rule (crossing in all four models) therefore fails.
 3. **A word-sense signal beyond context leakage** that appears with training and is absent in controls (pre-registered (b): pass). Head ablations confirm its causal basis at the layer where it peaks (post hoc).
 
 **What failed or was not testable:**
@@ -24,7 +24,7 @@
 - Chimera-index predictions.
 - Several temperature-shape predictions.
 
-Two blind spots matter for anyone adopting these measures. **LZ-based PCI and the chimera index both rate random networks as "rich"**, and only λ separated trained from random dynamics. **Recurrence did not raise PCI**: a recurrent state-space model (Mamba) trained on the same data scored about the same as Pythia.
+Two blind spots matter for anyone adopting these measures. **LZ-based PCI and the chimera index both rate random networks as "rich"** (clearly at 160M and 410M; in PREREG-5 the shuffled Pythia-1B and GPT-2 scored below their trained models), and only λ separated trained from random dynamics in every model, by a modest margin at 410M and 1B. **Recurrence did not raise PCI**: a recurrent state-space model (Mamba) trained on the same data scored about the same as Pythia.
 
 ## 2. Background and indicators
 
@@ -117,21 +117,42 @@ The Cacophony framework orders functional descriptions in five levels: behaviour
 ### 4.5 Scorecard
 See `results/SCORECARD.md`; it is generated mechanically.
 
-### 4.6 PREREG-5: confirmatory test of the zero crossing across scale and family
-*(Pending. Pythia-160M on fresh passages, Pythia-410M, Pythia-1B and GPT-2 small, each with shuffled and untrained controls; pre-registered predictions P1–P4; headline only if P1 passes in all four models.)*
+### 4.6 PREREG-5: confirmatory test of the zero crossing across scale and family (Figs. 7 and 8)
+- **Design:** 32 fresh passages × 4 directions. Trained models at β ∈ {0.25, 0.5, 0.75, 1, 1.5, 2}; weight-shuffled copies (seed 1001) at β ∈ {0.25, 1, 2}; untrained step 0 at β = 1 (Pythia only). All 39 conditions completed; no condition needed the fallback ε (ε* ∈ {0.03, 0.1, 0.32}).
+- **Scored results** (λ with crossed-bootstrap 95% CIs):
+
+| model | λ(0.75) | λ(1) | λ(1.5) | P1 | P2 | P3 | P4 |
+|---|---|---|---|---|---|---|---|
+| Pythia-160M | −0.043 [−0.062, −0.023] | −0.007 | +0.055 [+0.029, +0.082] | PASS | PASS | PASS | PASS |
+| Pythia-410M | +0.064 [+0.055, +0.072] | +0.073 | +0.089 [+0.080, +0.099] | FAIL | FAIL | PASS | PASS |
+| Pythia-1B | +0.071 [+0.063, +0.079] | +0.090 | +0.126 [+0.115, +0.138] | FAIL | PASS | PASS | PASS |
+| GPT-2 small | −0.015 [−0.027, −0.0003] | −0.012 | +0.017 [+0.004, +0.031] | PASS | FAIL | PASS | PASS |
+
+- **Headline rule: FAILS.** P1 passes in Pythia-160M and GPT-2 small, and fails in Pythia-410M and 1B. The result is reported model by model.
+- **P2 failures:**
+  - Pythia-410M: λ(0.5) = +0.038 is just below λ(0.25) = +0.042, a near-tie.
+  - GPT-2: the curve is U-shaped. λ(0.25) = +0.075, with a minimum near β = 0.75–1.
+- **P3: PASS everywhere.** Every shuffled copy is positive at every β tested (+0.05 to +0.29), and every untrained Pythia model is positive at β = 1 (+0.085 to +0.126).
+- **P4: PASS everywhere,** but the margin over step 0 is small at 410M (|λ| difference 0.013 [0.003, 0.022]) and at 1B (0.022 [0.012, 0.031]).
+- **Secondary (pre-specified, not scored):**
+  - **PCI at θ = 0.01 falls with flattened attention in every model** (Fig. 7). From β = 1 to 0.25: 0.648 → 0.457 (160M), 0.473 → 0.362 (410M), 0.468 → 0.359 (1B), 0.525 → 0.255 (GPT-2); the 95% CIs over passages do not overlap. Reach holds in Pythia (0.22–0.26) and rises in GPT-2 (0.21 → 0.56).
+  - **Trained vs shuffled PCI at β = 1:** 0.648 vs 0.735 (160M), 0.473 vs 0.513 (410M), 0.468 vs 0.414 (1B), 0.525 vs 0.472 (GPT-2). Untrained: 0.20, 0.13 and 0.17.
+  - **Late-layer λ (t ≥ 3) at β = 1:** −0.142 (160M), +0.033 (410M), +0.037 (1B), −0.079 (GPT-2). The late-layer contraction that balances early build-up (§4.4) is present in the two models whose λ crosses zero and absent at 410M and 1B.
+  - **Averaged-curve λ** (slope of the passage- and direction-averaged response curve; `scripts/p4b_growth_curves.py fresh3`): at β = 1, −0.039 (160M), +0.069 (410M), +0.097 (1B), −0.003 (GPT-2). This estimator agrees that 410M and 1B amplify at every β (+0.02 to +0.15) and that GPT-2 sits near zero at its natural temperature. For Pythia-160M it again places the crossing above β = 1 (between 1.5 and 2), as in §4.4. Every control is positive (+0.04 to +0.27).
+- **Reading:** λ ≈ 0 at the natural temperature is a property of the two small models tested (124M and 160M, from two families), not of trained transformers in general. We have not tested why the larger Pythia models amplify.
 
 ## 5. What this means for the Cacophony framework
 1. **Level-3 perturbational indicators are well defined in transformers and measurable without outputs.** They inherit the strengths and limitations of their neuroscience counterparts.
-   - They respond to within-system manipulations as clinical PCI does: anaesthesia-like flattening, and a seizure-like shuffled Mamba.
+   - They respond to within-system manipulations as clinical PCI does: anaesthesia-like flattening (in all four PREREG-5 models), and a seizure-like shuffled Mamba.
    - Like LZ-based measures in neuroscience, they do not by themselves separate structured from random dynamics. Clinical PCI avoids that problem because it compares states within one brain.
-2. **Criticality is the more discriminating axis.** λ separated trained from untrained and shuffled networks where PCI and the chimera index did not. It also places trained Pythia at the order–chaos boundary of its own temperature family. If PREREG-5 confirms this across scale and family, it is a candidate level-3 indicator that is both output-free and not fooled by randomness.
+2. **Criticality discriminates in small models but is not yet a general indicator.** λ separated trained from untrained and shuffled networks where PCI and the chimera index did not, and it placed trained Pythia-160M at the order–chaos boundary of its own temperature family. PREREG-5 confirmed the crossing in a second family (GPT-2 small) and on fresh text, but not at 410M or 1B. There, trained models amplify at every temperature and sit only modestly closer to zero than their controls. The anaesthesia signature in PCI, by contrast, held in all four models.
 3. **Recurrence did not help.** Mamba's lateral recurrence did not raise PCI. Our perturbation lattice treats depth as time, so a recurrent-generation protocol, in which perturbations are followed across generated tokens, remains an open test.
 4. **The level-2 "symmetry breaking" picture did not survive.** Sense information arrives at the first attention layer, integrates cues nearly linearly, and is later diluted into context. This is graded field response, not a commitment event. It argues against reading ignition-like dynamics into transformer word processing, at least at this scale.
 
 ## 6. Caveats
-- **Scope:** most results are at 160M parameters, with one text domain (Wikipedia) and synthetic manipulations. "Anaesthesia" here means attention temperature, not a pharmacological analogue.
+- **Scope:** the core results are at 160M parameters; PREREG-5 extends to 410M, 1B and GPT-2 small. One text domain (Wikipedia) and synthetic manipulations throughout. "Anaesthesia" here means attention temperature, not a pharmacological analogue.
 - **Thresholds:** θ = 0.01 was chosen after exploratory data, then confirmed on fresh data. The originally pre-registered θ = 0.1 results are reported as scored.
-- **Interpretation:** λ ≈ 0 depends on the estimator (§4.4) and reflects a balance of early build-up and late contraction.
+- **Interpretation:** λ ≈ 0 depends on the estimator (§4.4), reflects a balance of early build-up and late contraction, and does not hold at 410M or 1B (§4.6).
 - **What is not claimed:** nothing here is evidence for or against consciousness. These are tests of whether candidate indicators are well defined, robust and discriminating.
 
 ## 7. Reproducing

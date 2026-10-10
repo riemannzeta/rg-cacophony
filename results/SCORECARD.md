@@ -24,3 +24,24 @@
 - **PREREG-3 R2**: PASS
 - **PREREG-3 R3**: PASS
 - **PREREG-3 R4**: PASS
+- **PREREG-4 C2**: FAIL
+- **PREREG-4 S1**: PASS
+- **PREREG-4 C1**: FAIL
+- **PREREG-4 C3**: PASS
+- **PREREG-4 S2**: FAIL
+- **PREREG-5 pythia-160m P1**: PASS
+- **PREREG-5 pythia-160m P2**: PASS
+- **PREREG-5 pythia-160m P3**: PASS
+- **PREREG-5 pythia-160m P4**: PASS
+- **PREREG-5 pythia-410m P1**: FAIL
+- **PREREG-5 pythia-410m P2**: FAIL
+- **PREREG-5 pythia-410m P3**: PASS
+- **PREREG-5 pythia-410m P4**: PASS
+- **PREREG-5 pythia-1b P1**: FAIL
+- **PREREG-5 pythia-1b P2**: PASS
+- **PREREG-5 pythia-1b P3**: PASS
+- **PREREG-5 pythia-1b P4**: PASS
+- **PREREG-5 gpt2 P1**: PASS
+- **PREREG-5 gpt2 P2**: FAIL
+- **PREREG-5 gpt2 P3**: PASS
+- **PREREG-5 gpt2 P4**: PASS

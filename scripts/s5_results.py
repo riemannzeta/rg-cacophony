@@ -62,7 +62,7 @@ def main() -> None:
                 "neutral": s["neutral"], "post_hoc": load(d / "posthoc.json") and {
                     k: v for k, v in load(d / "posthoc.json").items() if k in ("label", "ablation", "entropy_detrended", "neutral_lean")}}
     for root, key in (("m2", "M2"), ("m2_fresh", "M2_fresh_PREREG3"), ("m2_fresh2", "M2_fresh2_PREREG4"),
-                      ("m2_fresh2_posthoc", "M2_fresh2_PREREG4_posthoc")):
+                      ("m2_fresh2_posthoc", "M2_fresh2_PREREG4_posthoc"), ("m2_fresh3", "M2_fresh3_PREREG5")):
         if (R / root).exists():
             out.setdefault(key, {})
             for d in sorted(p for p in (R / root).iterdir() if p.is_dir()):
@@ -79,6 +79,9 @@ def main() -> None:
     gc = load(R / "m2_fresh2" / "growth_curves.json")
     if gc:
         out["PREREG4_growth_curves_exploratory"] = {k: {kk: vv for kk, vv in v.items() if kk != "curves"} for k, v in gc["conditions"].items()}
+    gc5 = load(R / "m2_fresh3" / "growth_curves.json")
+    if gc5:
+        out["PREREG5_growth_curves_secondary"] = {k: {kk: vv for kk, vv in v.items() if kk != "curves"} for k, v in gc5["conditions"].items()}
     for d in sorted((R / "conflict").iterdir()) if (R / "conflict").exists() else []:
         s = load(d / "summary.json")
         if s:
