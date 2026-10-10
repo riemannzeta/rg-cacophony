@@ -1,0 +1,40 @@
+EXIT=0/0 --model pythia-160m --step 143000 --k-max 9 --calib-k 0,4,8 --manip beta=0.25 01:36:37
+EXIT=0/0 --model pythia-160m --step 143000 --k-max 9 --calib-k 0,4,8 --manip beta=0.5 01:39:16
+EXIT=0/0 --model pythia-160m --step 143000 --k-max 9 --calib-k 0,4,8 --manip beta=0.75 01:42:01
+EXIT=0/0 --model pythia-160m --step 143000 --k-max 9 --calib-k 0,4,8 01:44:38
+EXIT=0/0 --model pythia-160m --step 143000 --k-max 9 --calib-k 0,4,8 --manip beta=1.5 01:47:30
+EXIT=0/0 --model pythia-160m --step 143000 --k-max 9 --calib-k 0,4,8 --manip beta=2 01:50:24
+EXIT=0/0 --model pythia-160m --step 143000 --shuffle-seed 1001 --k-max 9 --calib-k 0,4,8 --manip beta=0.25 01:52:54
+EXIT=0/0 --model pythia-160m --step 143000 --shuffle-seed 1001 --k-max 9 --calib-k 0,4,8 01:55:27
+EXIT=0/0 --model pythia-160m --step 143000 --shuffle-seed 1001 --k-max 9 --calib-k 0,4,8 --manip beta=2 01:58:20
+EXIT=0/0 --model pythia-160m --step 0 --k-max 9 --calib-k 0,4,8 02:00:16
+EXIT=0/0 --model gpt2 --step 143000 --k-max 9 --calib-k 0,4,8 --manip beta=0.25 02:03:04
+EXIT=0/0 --model gpt2 --step 143000 --k-max 9 --calib-k 0,4,8 --manip beta=0.5 02:05:52
+EXIT=0/0 --model gpt2 --step 143000 --k-max 9 --calib-k 0,4,8 --manip beta=0.75 02:08:49
+EXIT=0/0 --model gpt2 --step 143000 --k-max 9 --calib-k 0,4,8 02:11:30
+EXIT=0/0 --model gpt2 --step 143000 --k-max 9 --calib-k 0,4,8 --manip beta=1.5 02:14:25
+EXIT=0/0 --model gpt2 --step 143000 --k-max 9 --calib-k 0,4,8 --manip beta=2 02:17:27
+EXIT=0/0 --model gpt2 --step 143000 --shuffle-seed 1001 --k-max 9 --calib-k 0,4,8 --manip beta=0.25 02:19:49
+EXIT=0/0 --model gpt2 --step 143000 --shuffle-seed 1001 --k-max 9 --calib-k 0,4,8 02:22:16
+EXIT=0/0 --model gpt2 --step 143000 --shuffle-seed 1001 --k-max 9 --calib-k 0,4,8 --manip beta=2 02:25:22
+EXIT=0/0 --model pythia-410m --step 143000 --k-stride 2 --k-max 21 --calib-k 0,8,16 --manip beta=0.25 02:31:31
+EXIT=0/0 --model pythia-410m --step 143000 --k-stride 2 --k-max 21 --calib-k 0,8,16 --manip beta=0.5 02:37:52
+EXIT=0/0 --model pythia-410m --step 143000 --k-stride 2 --k-max 21 --calib-k 0,8,16 --manip beta=0.75 02:44:24
+EXIT=0/0 --model pythia-410m --step 143000 --k-stride 2 --k-max 21 --calib-k 0,8,16 02:50:35
+EXIT=0/0 --model pythia-410m --step 143000 --k-stride 2 --k-max 21 --calib-k 0,8,16 --manip beta=1.5 02:57:29
+EXIT=0/0 --model pythia-410m --step 143000 --k-stride 2 --k-max 21 --calib-k 0,8,16 --manip beta=2 03:04:37
+EXIT=0/0 --model pythia-410m --step 143000 --shuffle-seed 1001 --k-stride 2 --k-max 21 --calib-k 0,8,16 --manip beta=0.25 03:10:58
+EXIT=0/0 --model pythia-410m --step 143000 --shuffle-seed 1001 --k-stride 2 --k-max 21 --calib-k 0,8,16 03:17:17
+EXIT=0/0 --model pythia-410m --step 143000 --shuffle-seed 1001 --k-stride 2 --k-max 21 --calib-k 0,8,16 --manip beta=2 03:24:30
+EXIT=0/0 --model pythia-410m --step 0 --k-stride 2 --k-max 21 --calib-k 0,8,16 03:29:39
+EXIT=0/0 --model pythia-1b --step 143000 --k-max 13 --calib-k 0,5,10 --manip beta=0.25 03:40:11
+EXIT=0/0 --model pythia-1b --step 143000 --k-max 13 --calib-k 0,5,10 --manip beta=0.5 03:50:31
+EXIT=0/0 --model pythia-1b --step 143000 --k-max 13 --calib-k 0,5,10 --manip beta=0.75 04:01:05
+EXIT=0/0 --model pythia-1b --step 143000 --k-max 13 --calib-k 0,5,10 04:11:32
+EXIT=0/0 --model pythia-1b --step 143000 --k-max 13 --calib-k 0,5,10 --manip beta=1.5 04:22:22
+EXIT=0/0 --model pythia-1b --step 143000 --k-max 13 --calib-k 0,5,10 --manip beta=2 04:33:20
+EXIT=0/0 --model pythia-1b --step 143000 --shuffle-seed 1001 --k-max 13 --calib-k 0,5,10 --manip beta=0.25 04:45:51
+EXIT=0/0 --model pythia-1b --step 143000 --shuffle-seed 1001 --k-max 13 --calib-k 0,5,10 04:58:20
+EXIT=0/0 --model pythia-1b --step 143000 --shuffle-seed 1001 --k-max 13 --calib-k 0,5,10 --manip beta=2 05:11:23
+EXIT=0/0 --model pythia-1b --step 0 --k-max 13 --calib-k 0,5,10 05:21:54
+ALLDONE Sat Oct 10 05:21:54 UTC 2026

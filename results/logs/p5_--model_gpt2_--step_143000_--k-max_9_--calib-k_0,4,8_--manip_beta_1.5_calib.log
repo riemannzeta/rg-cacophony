@@ -1,0 +1,6 @@
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 3400.68it/s]
+Loaded pretrained model gpt2 into HookedTransformer
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 3324.30it/s]
+Loaded pretrained model gpt2 into HookedTransformer
+Changing model dtype to torch.float64
+calib done eps*=0.03162277660168379

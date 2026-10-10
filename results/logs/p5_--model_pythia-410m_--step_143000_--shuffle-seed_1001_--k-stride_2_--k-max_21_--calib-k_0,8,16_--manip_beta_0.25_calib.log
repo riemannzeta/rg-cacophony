@@ -1,0 +1,6 @@
+Loading weights:   0%|          | 0/292 [00:00<?, ?it/s]Loading weights: 100%|██████████| 292/292 [00:00<00:00, 3285.36it/s]
+Loaded pretrained model pythia-410m into HookedTransformer
+Loading weights:   0%|          | 0/292 [00:00<?, ?it/s]Loading weights: 100%|██████████| 292/292 [00:00<00:00, 3184.88it/s]
+Loaded pretrained model pythia-410m into HookedTransformer
+Changing model dtype to torch.float64
+calib done eps*=0.31622776601683794

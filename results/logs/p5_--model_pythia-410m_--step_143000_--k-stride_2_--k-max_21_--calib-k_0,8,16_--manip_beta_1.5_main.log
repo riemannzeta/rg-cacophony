@@ -1,0 +1,5 @@
+Loading weights:   0%|          | 0/292 [00:00<?, ?it/s]Loading weights: 100%|██████████| 292/292 [00:00<00:00, 3403.58it/s]
+Loaded pretrained model pythia-410m into HookedTransformer
+/home/ubuntu/rgc-p5/scripts/s3_m2.py:272: RuntimeWarning: Mean of empty slice
+  "lambda_by_k": np.nanmean(lam, axis=(1, 2, 3)).tolist(),
+main done
