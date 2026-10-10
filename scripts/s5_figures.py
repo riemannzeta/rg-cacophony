@@ -97,8 +97,10 @@ def fig_replication(path):
                     label="density-matched PCI")
             ax.legend(fontsize=7.5)
         ax.invert_xaxis()
-        ax.set_xlabel("attention inverse temperature β  (1 = trained; 0 = uniform)")
+        ax.set_xlabel("β  (1 = trained, 0 = uniform)")
         ax.set_title(title, loc="left", fontsize=9.5)
+        if j == 2:
+            ax.set_ylim(0, 0.4)  # honest scale: reach changes by only a few hundredths
     fig.suptitle("Fresh-data replication: flattening attention lowers PCI without lowering reach (PREREG-3)",
                  x=0.0, ha="left", fontweight="bold", color=P.INK)
     P._save(fig, path)
@@ -116,14 +118,16 @@ def fig_lambda(path):
     lam = [np.nanmean(m["per_passage_dir_lambda"]) for _, m in vals]
     ys = np.arange(len(vals))[::-1]
     ax.axvline(0, color=P.AXIS, linewidth=1)
+    rng = np.random.default_rng(0)
     for y, (lab, m), l in zip(ys, vals, lam):
-        arr = np.array(m["per_passage_dir_lambda"], float)
-        lo, hi = np.nanpercentile(arr.mean(1), [2.5, 97.5])
+        arr = np.nanmean(np.array(m["per_passage_dir_lambda"], float), axis=1)  # per passage
+        boots = [np.mean(arr[rng.integers(0, len(arr), len(arr))]) for _ in range(2000)]
+        lo, hi = np.percentile(boots, [2.5, 97.5])  # 95% CI of the mean (bootstrap over passages)
         ax.plot([lo, hi], [y, y], color=P.SERIES[0 if lab == "trained" else 4], linewidth=2)
         ax.scatter(l, y, s=50, color=P.SERIES[0 if lab == "trained" else 4], zorder=3)
     ax.set_yticks(ys)
     ax.set_yticklabels([lab for lab, _ in vals])
-    ax.set_xlabel("growth exponent λ per layer  (<0 dies out · 0 poised · >0 grows)")
+    ax.set_xlabel("growth exponent λ per layer, mean with 95% CI\n(<0 dies out · 0 poised · >0 grows)")
     ax.set_title("Trained model sits at λ ≈ 0 (S1)", loc="left")
     betas = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0]
     for slot, base, lab in ((0, TR, "trained"), (4, f"{TR}-shuffled1001", "shuffled 1")):
@@ -183,24 +187,32 @@ def fig_temperature(path):
 
 
 def fig_growth(path):
-    """Fig 6: growth curves behind lambda (exploratory): build-up vs amplification."""
+    """Fig 6: growth curves behind lambda (exploratory). Each curve is labelled with its OWN fitted
+    slope (0.5*log E over all t, and over t >= 3); the aggregate lambda averages over all injections."""
     gc = load(R / "m2_fresh2" / "growth_curves.json")
     if not gc:
         return
-    fig, ax = plt.subplots(figsize=(7.2, 4.0), constrained_layout=True)
     show = [(TR, "trained", 0), ("pythia-160m_step0", "step 0", 3), (f"{TR}-shuffled1001", "shuffled 1", 4)]
-    for name, lab, slot in show:
-        c = gc["conditions"].get(name)
-        if not c:
-            continue
-        E = np.array(c["curves"]["k0_p64"])
-        ax.plot(np.arange(1, len(E) + 1), np.sqrt(E), color=P.SERIES[slot], marker="o", markersize=3.5,
-                label=f"{lab} (λ all {c['lambda_all_mean']:+.3f}, late {c['lambda_late_mean']:+.3f})")
-    ax.set_yscale("log")
-    ax.set_xlabel("layers after the poke (injection at the embedding, position 64)")
-    ax.set_ylabel("RMS cross-word response (gain)")
-    ax.set_title("How the poke's footprint evolves with depth (exploratory)", loc="left")
-    ax.legend(fontsize=7.5)
+    fig, axes = plt.subplots(1, 2, figsize=(10.5, 3.9), constrained_layout=True, sharey=True)
+    for ax, cell, title in ((axes[0], "k0_p64", "poke at the embedding (k = 0)"), (axes[1], "k4_p64", "poke mid-depth (k = 4)")):
+        for name, lab, slot in show:
+            c = gc["conditions"].get(name)
+            if not c or cell not in c["curves"]:
+                continue
+            E = np.array(c["curves"][cell])
+            t = np.arange(1, len(E) + 1)
+            y = 0.5 * np.log(E)
+            sl_all = np.polyfit(t, y, 1)[0]
+            sl_late = np.polyfit(t[t >= 3], y[t >= 3], 1)[0] if (t >= 3).sum() >= 3 else np.nan
+            ax.plot(t, np.sqrt(E), color=P.SERIES[slot], marker="o", markersize=3.5,
+                    label=f"{lab}: slope {sl_all:+.3f} (late {sl_late:+.3f})")
+        ax.set_yscale("log")
+        ax.set_xlabel("layers after the poke (position 64)")
+        ax.set_title(title, loc="left", fontsize=9.5)
+        ax.legend(fontsize=7.5)
+    axes[0].set_ylabel("RMS cross-word response (gain)")
+    fig.suptitle("How a poke's footprint evolves with depth (exploratory; aggregate λ averages all injection layers)",
+                 x=0.0, ha="left", fontweight="bold", color=P.INK, fontsize=10)
     P._save(fig, path)
 
 

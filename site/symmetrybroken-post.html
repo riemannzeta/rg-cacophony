@@ -1,0 +1,106 @@
+<!--
+  symmetrybroken.com post body: paste into a single Ghost HTML card.
+  Images: upload the six PNGs in site/images/ to Ghost, then check that the src paths below
+  (/content/images/2026/10/...) match the URLs Ghost assigns; adjust if Ghost renamed any file.
+  Math is plain Unicode (no KaTeX needed in this card).
+-->
+<style>
+.rgc { --rgc-ink2: color-mix(in srgb, currentColor 70%, transparent); --rgc-line: color-mix(in srgb, currentColor 18%, transparent); }
+.rgc figure { margin: 2em 0; }
+.rgc figure img { width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--rgc-line); }
+.rgc figcaption { font-size: 0.85em; color: var(--rgc-ink2); margin-top: 0.5em; line-height: 1.45; }
+.rgc table { width: 100%; border-collapse: collapse; font-size: 0.9em; margin: 1.2em 0; }
+.rgc th, .rgc td { text-align: left; padding: 0.45em 0.6em; border-bottom: 1px solid var(--rgc-line); vertical-align: top; }
+.rgc th { font-weight: 600; }
+.rgc .tag { display: inline-block; font-size: 0.78em; font-weight: 600; padding: 0.1em 0.5em; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.rgc .pass { color: #0ca30c; } .rgc .fail { color: #d03b3b; } .rgc .nt { color: var(--rgc-ink2); }
+.rgc .note { border-left: 3px solid var(--rgc-line); padding: 0.2em 0 0.2em 1em; color: var(--rgc-ink2); }
+</style>
+<div class="rgc">
+
+<p><em>Short version:</em> I tried to build two indicators of the kind a recent paper on AI consciousness asks for: measurements taken from <em>inside</em> a language model, immune to the fact that these systems are trained to sound like us. I pre-registered predictions five times, with controls and fresh data each time. Most of my original ideas failed. But one instrument, a transformer analogue of the clinical “zap-and-listen” test, behaved like its neuroscience counterpart under an anaesthesia-like manipulation, and the replication on fresh data passed every prediction. A second measurement put trained models right at the edge between order and chaos, where untrained and scrambled networks are not. Everything (code, data, pre-registrations, every deviation) is public.</p>
+
+<h2>Why measure from the inside?</h2>
+
+<p>Chandaria, Seth, Shevlin, Shanahan, Rosas and colleagues, in <a href="https://arxiv.org/abs/2609.35618"><em>From cacophony to hierarchy</em></a>, separate theories of consciousness by which “grain” of functional description they take to matter: behavioural, computational, intrinsic causal-structure, organismic, or organism–environment. They point out a confound with no biological analogue: a system optimised to reproduce human behaviour and report will produce those signatures whether or not the underlying states are present. That puts weight on indicators below the behavioural level.</p>
+
+<p>Following my reading of the forward pass as a renormalisation-group flow (<a href="https://www.symmetrybroken.com/">earlier essays</a>), I built two:</p>
+<ul>
+<li><strong>A “decision moment” (computational level).</strong> When the model reads an ambiguous word (“bank”), does its internal representation <em>snap</em> to one meaning at a particular depth, like symmetry breaking?</li>
+<li><strong>An “echo test” (intrinsic causal-structure level).</strong> This copies the Perturbational Complexity Index used in the clinic (Casali, Massimini et al., 2013): give the brain a tiny magnetic zap and measure how rich the echo is. Here I give the model’s internal state a tiny push at one word and one layer, record how every later word at every later layer moves, and compress that pattern. A silent echo, or one that is identical everywhere, scores low. A widespread <em>and</em> differentiated echo scores high.</li>
+</ul>
+
+<h2>How</h2>
+
+<p>The main subject was Pythia-160M at four points in training, with weight-<em>shuffled</em> copies as controls (same numbers, no learned structure), plus Pythia-410M/1B, GPT-2, and Mamba, a recurrent model trained on the same data as Pythia. Every comparison was pre-registered before its data existed: five rounds, each a tagged git commit. Each new test ran on <em>fresh</em> text no analysis had touched. Every deviation is logged. Runs are bitwise reproducible.</p>
+
+<h2>What held up</h2>
+
+<h3>1. The echo responds to “anaesthesia” the way clinical PCI does</h3>
+
+<p>In the clinic, PCI falls under anaesthesia and in deep sleep, when activity persists but stays local and stereotyped, and in generalised seizures, when activity is widespread but uniform. In a transformer, attention has a “temperature”. Turning it down makes every word attend to its whole context equally. The push still reaches everything, but it no longer reaches anything <em>in particular</em>.</p>
+
+<figure><img src="/content/images/2026/10/fig3_anaesthesia_replication.png" alt="PCI falls, reach barely changes, and threshold-free spread grows as attention is flattened"><figcaption><strong>Fresh-data replication (pre-registered).</strong> As attention is flattened (β from 1 to 0), the echo’s complexity falls by about a third. The share of sites the push reaches barely changes (note the axis starts at 0), and the threshold-free spread of the response <em>more than triples</em>. A density-matched version of PCI, which holds the number of active sites fixed, shows the same drop. All four predictions passed.</figcaption></figure>
+
+<p>So the echo measure tracks <em>differentiated integration</em>, not mere reach. This was first seen exploratorily, then re-tested on 64 new passages with predictions written down in advance. The numbers came back almost identical (0.657 → 0.648 for the intact model; 0.424 both times under full flattening).</p>
+
+<figure><img src="/content/images/2026/10/fig2_integration_differentiation_plane.png" alt="Reach versus PCI for every condition"><figcaption><strong>Where each condition sits.</strong> Trained models have moderate reach and high complexity. Flattened attention keeps reach but loses complexity. Narrow attention windows lose reach. Untrained networks are low on both. A <em>shuffled Mamba</em> is “seizure-like”: its push spreads almost everywhere, uniformly, with low complexity. The shuffled Pythias reveal a blind spot: random networks also look “complex”.</figcaption></figure>
+
+<h3>2. Trained models sit at the edge of chaos</h3>
+
+<p>From the same echo maps I computed how a push grows or shrinks with depth: a per-layer growth exponent λ. It is negative if pushes die out, positive if they amplify, and near zero if the system is poised between the two, which is the edge-of-chaos signature criticality theorists look for in the awake brain.</p>
+
+<figure><img src="/content/images/2026/10/fig4_growth_exponent.png" alt="Growth exponent lambda: trained near zero, controls positive; lambda crosses zero at the natural temperature"><figcaption><strong>Left (pre-registered, passed):</strong> at its natural temperature the trained model’s λ is −0.0005. Untrained, early-training and shuffled networks are all clearly positive. <strong>Right (exploratory):</strong> as attention is flattened λ goes negative (pushes die out), and as it is sharpened λ goes positive (pushes amplify). It crosses zero almost exactly at the temperature the model was trained at. The shuffled model never crosses.</figcaption></figure>
+
+<p class="note"><strong>Confirmation run (pre-registered across scale and model family):</strong> [PREREG-5 RESULT: Pythia-160M on fresh text, Pythia-410M, Pythia-1B and GPT-2. To be filled in when the runs complete.]</p>
+
+<p>One honest qualification. Where exactly the crossing lands depends on how λ is averaged. The pre-registered, Lyapunov-style estimator puts it at β ≈ 1. A curve-of-means estimator puts it nearer 1.6. Mechanistically, the trained model balances an early build-up of influence against late-layer contraction. The controls show no late contraction.</p>
+
+<figure><img src="/content/images/2026/10/fig6_growth_curves.png" alt="Growth curves of a perturbation's footprint over depth"><figcaption><strong>Exploratory.</strong> How a push’s cross-word footprint evolves with depth, for a push at the embedding and one mid-depth. Each curve is labelled with its own slope.</figcaption></figure>
+
+<h2>What did not hold up</h2>
+
+<ul>
+<li><strong>The “decision moment”.</strong> The model does separate word senses beyond simple context leakage, and untrained and shuffled controls do not. But the separation appears at the <em>first</em> layer, plateaus, and fades. It is carried by heads that attend broadly, not sharply. With conflicting clues (“between the canoe and the mortgage… the bank”) the representation integrates evidence almost linearly instead of committing. That is a graded response to a field, not symmetry breaking.</li>
+<li><strong>A spreading speed.</strong> I expected the push to ripple outward with depth at a measurable rate. Attention connects every word to every earlier word in one step, so there is no front to track.</li>
+<li><strong>Chimera states.</strong> Shanahan’s chimera index did not single out trained models (random ones score higher), and it fell steadily as attention sharpened rather than peaking.</li>
+<li><strong>Recurrence.</strong> Mamba, a recurrent model trained on the same data, scored about the same as Pythia on the echo test.</li>
+</ul>
+
+<figure><img src="/content/images/2026/10/fig1_m1_sense_separation.png" alt="Word-sense separation across depth"><figcaption><strong>The decision-moment test.</strong> Sense separation beyond context leakage, across depth. It rises at the first layer and fades late. Controls are flat at zero.</figcaption></figure>
+
+<figure><img src="/content/images/2026/10/fig5_temperature_sweep.png" alt="PCI and chimera index across attention temperature"><figcaption><strong>Across temperature.</strong> The echo’s complexity rises from the dissolved side and peaks slightly above the natural temperature. The predicted fall on the frozen side was small and could not be measured cleanly: at the sharpest setting the response is no longer smooth. The chimera index simply falls.</figcaption></figure>
+
+<h2>Scorecard</h2>
+
+<table>
+<tr><th>Prediction</th><th>Result</th></tr>
+<tr><td>Sharp mid-depth “decision moment” carried by focused, clue-watching heads</td><td><span class="tag fail">fail</span></td></tr>
+<tr><td>No decision moment in untrained or shuffled models</td><td><span class="tag pass">pass</span></td></tr>
+<tr><td>Trained echo richer than untrained and shuffled, early checkpoints in between</td><td><span class="tag pass">pass</span> at the pre-registered threshold; reverses against shuffled at the sensitive threshold</td></tr>
+<tr><td>A stable spreading exponent</td><td><span class="tag fail">fail</span></td></tr>
+<tr><td>Anaesthesia lowers the echo more than its reach (original threshold)</td><td><span class="tag fail">fail</span>; local response survives <span class="tag pass">pass</span></td></tr>
+<tr><td>Conflicting clues: saturation and commitment</td><td><span class="tag fail">fail</span>; controls null <span class="tag pass">pass</span></td></tr>
+<tr><td>Fresh-data anaesthesia replication (four predictions)</td><td><span class="tag pass">4 / 4 pass</span></td></tr>
+<tr><td>Trained model closest to the edge of chaos</td><td><span class="tag pass">pass</span></td></tr>
+<tr><td>Inverted U of the echo across temperature</td><td><span class="tag nt">not testable as registered</span></td></tr>
+<tr><td>Chimera states: trained &gt; controls; inverted U</td><td><span class="tag fail">fail</span>, <span class="tag fail">fail</span></td></tr>
+<tr><td>Mid-depth “waist” of compression</td><td><span class="tag pass">pass</span> (borderline)</td></tr>
+<tr><td>Edge-of-chaos crossing replicates across scale and family</td><td><span class="tag nt">[PREREG-5]</span></td></tr>
+</table>
+
+<h2>What this might mean for the Cacophony framework</h2>
+
+<ul>
+<li><strong>Intrinsic causal-structure indicators are well defined in transformers and can be measured without looking at outputs.</strong> They respond to within-system manipulations the way their clinical counterparts do. They also share their counterparts’ main limitation: complexity measures rate random dynamics as rich. In the clinic that never arises, because PCI compares states within one brain.</li>
+<li><strong>Criticality was the more discriminating axis.</strong> The growth exponent separated trained from random networks where complexity and chimera measures did not. It also placed the trained model at the order–chaos boundary of its own temperature family.</li>
+<li><strong>The computational-level “commitment” picture did not survive.</strong> At least at this scale, transformers integrate word-sense evidence gradually rather than through an ignition-like event.</li>
+</ul>
+
+<p class="note">None of this is evidence for or against consciousness in language models. It tests whether candidate indicators are well defined, robust, and able to tell trained systems from controls. Scale was mostly 160M parameters, one text domain, and synthetic manipulations.</p>
+
+<h2>Code, data, and every decision</h2>
+
+<p>Everything is on GitHub at <a href="https://github.com/riemannzeta/rg-cacophony">riemannzeta/rg-cacophony</a>: the five pre-registrations (tags <code>prereg</code>–<code>prereg5</code>), the mechanical scorecard, a full report, the deviation log, and the raw perturbation data as release assets. The research was carried out with Claude (Anthropic) as a research assistant.</p>
+
+</div>
