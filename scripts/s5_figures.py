@@ -101,7 +101,7 @@ def fig_replication(path):
         ax.set_title(title, loc="left", fontsize=9.5)
         if j == 2:
             ax.set_ylim(0, 0.4)  # honest scale: reach changes by only a few hundredths
-    fig.suptitle("Fresh-data replication: flattening attention lowers PCI without lowering reach (PREREG-3)",
+    fig.suptitle("Fresh-data replication: flattening attention lowers PCI without lowering reach (pre-registered)",
                  x=0.0, ha="left", fontweight="bold", color=P.INK)
     P._save(fig, path)
 
@@ -128,7 +128,7 @@ def fig_lambda(path):
     ax.set_yticks(ys)
     ax.set_yticklabels([lab for lab, _ in vals])
     ax.set_xlabel("growth exponent λ per layer, mean with 95% CI\n(<0 dies out · 0 poised · >0 grows)")
-    ax.set_title("Trained model sits at λ ≈ 0 (S1)", loc="left")
+    ax.set_title("Trained model sits at λ ≈ 0 (pre-registered)", loc="left")
     betas = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0]
     for slot, base, lab in ((0, TR, "trained"), (4, f"{TR}-shuffled1001", "shuffled 1")):
         xs, ls = [], []
@@ -143,7 +143,7 @@ def fig_lambda(path):
     ax2.set_xscale("log", base=2)
     ax2.set_xlabel("attention inverse temperature β (log scale; 1 = natural)")
     ax2.set_ylabel("λ")
-    ax2.set_title("λ across temperature (exploratory T3)", loc="left")
+    ax2.set_title("λ across temperature (exploratory)", loc="left")
     ax2.legend(fontsize=8)
     P._save(fig, path)
 
@@ -218,6 +218,8 @@ def fig_growth(path):
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
+    if (R / "figures" / "zap_examples.npz").exists():
+        fig_zap_examples(OUT / "fig0_zap_examples.png")
     fig_m1_delta(OUT / "fig1_m1_sense_separation.png")
     fig_plane(OUT / "fig2_integration_differentiation_plane.png")
     fig_replication(OUT / "fig3_anaesthesia_replication.png")
@@ -225,6 +227,38 @@ def main() -> None:
     fig_temperature(OUT / "fig5_temperature_sweep.png")
     fig_growth(OUT / "fig6_growth_curves.png")
     print("figures ->", sorted(p.name for p in OUT.glob("*.png")))
+
+
+
+def fig_zap_examples(path):
+    """Fig 0 (explainer): one zap, four systems. Binarised echo maps at theta = 0.01."""
+    from matplotlib.colors import ListedColormap
+
+    from rgc.pci import lattice_bits, normalised_lz
+
+    z = np.load(R / "figures" / "zap_examples.npz")
+    panels = [("pythia-160m_step143000", "Trained language model"),
+              ("pythia-160m_step143000__beta=0", "Same model, attention flattened (“anaesthesia”)"),
+              ("pythia-160m_step0", "Untrained network"),
+              ("mamba-130m-hf-shuffled1001", "Scrambled weights (Mamba): “seizure-like”")]
+    p, th = 64, 0.01
+    fig, axes = plt.subplots(2, 2, figsize=(10.5, 5.4), constrained_layout=True)
+    cmap = ListedColormap([P.SURFACE, P.SERIES[0]])
+    for ax, (name, title) in zip(axes.ravel(), panels):
+        G = z[name]
+        bits = lattice_bits(G, p, th)
+        B = bits.reshape(G.shape[0] - 1, -1)
+        ax.imshow(B, aspect="auto", cmap=cmap, interpolation="nearest", vmin=0, vmax=1)
+        ax.set_title(f"{title}\nPCI {normalised_lz(bits):.2f} · reach {100 * bits.mean():.0f}% of sites",
+                     loc="left", fontsize=9)
+        ax.set_xlabel("later words (after the zapped word)")
+        ax.set_ylabel("layers after the zap")
+        ax.set_yticks([0, B.shape[0] - 1])
+        ax.set_yticklabels(["1", str(B.shape[0])])
+        ax.grid(False)
+    fig.suptitle("One typical zap, four systems (blue = moved by at least 1% of the zap)",
+                 x=0.0, ha="left", fontweight="bold", color=P.INK, fontsize=10.5)
+    P._save(fig, path)
 
 
 if __name__ == "__main__":
