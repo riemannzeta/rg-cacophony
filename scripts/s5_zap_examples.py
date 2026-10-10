@@ -3,8 +3,8 @@
 Runs where the raw lattices live (results/raw/m2_<name>.npz, i.e. on the GPU box or after
 downloading the release assets). For each condition, scans every (k <= 3 blocks, passage,
 direction) zap at p = 64 and keeps the one whose (PCI, reach) at theta = 0.01 is nearest the
-condition's mean from results/m2/<name>/main.json. Mamba lattices are stored per sub-layer, so
-they are strided by 2 to give one slice per block.
+condition's mean from results/m2/<name>/main.json. Mamba-130M has 24 layers; as in the primary
+analysis (PREREG-2 C), its lattices are strided by 2 to match Pythia-160M's 12-layer depth.
 
 Writes results/figures/zap_examples.npz (the chosen gain maps) and zap_examples.json (which zap
 was chosen, its PCI and reach, and the condition mean it was matched to).
